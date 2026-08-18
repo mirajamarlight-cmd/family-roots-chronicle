@@ -14,16 +14,169 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      marriages: {
+        Row: {
+          created_at: string
+          id: string
+          marriage_date: string | null
+          notes: string | null
+          person1_id: string
+          person2_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          marriage_date?: string | null
+          notes?: string | null
+          person1_id: string
+          person2_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          marriage_date?: string | null
+          notes?: string | null
+          person1_id?: string
+          person2_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marriages_person1_id_fkey"
+            columns: ["person1_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marriages_person2_id_fkey"
+            columns: ["person2_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parent_child: {
+        Row: {
+          child_id: string
+          created_at: string
+          id: string
+          parent_id: string
+          relationship_type: string
+        }
+        Insert: {
+          child_id: string
+          created_at?: string
+          id?: string
+          parent_id: string
+          relationship_type?: string
+        }
+        Update: {
+          child_id?: string
+          created_at?: string
+          id?: string
+          parent_id?: string
+          relationship_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_child_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parent_child_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      people: {
+        Row: {
+          birth_date: string | null
+          created_at: string
+          death_date: string | null
+          display_name: string
+          first_name: string
+          gender: string | null
+          id: string
+          last_name: string | null
+          middle_name: string | null
+          notes: string | null
+          photo_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          birth_date?: string | null
+          created_at?: string
+          death_date?: string | null
+          display_name: string
+          first_name: string
+          gender?: string | null
+          id?: string
+          last_name?: string | null
+          middle_name?: string | null
+          notes?: string | null
+          photo_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          birth_date?: string | null
+          created_at?: string
+          death_date?: string | null
+          display_name?: string
+          first_name?: string
+          gender?: string | null
+          id?: string
+          last_name?: string | null
+          middle_name?: string | null
+          notes?: string | null
+          photo_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      claim_admin: { Args: never; Returns: boolean }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +303,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
