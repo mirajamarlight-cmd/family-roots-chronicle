@@ -1,24 +1,149 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Loader2, Maximize2, Minimize2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { z } from "zod";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
-export const Route = createFileRoute("/")({
-  component: Index,
+import { AppShell } from "@/components/AppShell";
+import { PersonPanel } from "@/components/PersonPanel";
+import { FamilyTreeCanvas } from "@/components/FamilyTreeCanvas";
+import { Button } from "@/components/ui/button";
+import { useFamilyGraph } from "@/hooks/useFamily";
+import { ancestryPath } from "@/lib/family";
+
+const searchSchema = z.object({
+  person: z.string().optional(),
+  root: z.string().optional(),
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+export const Route = createFileRoute("/")({
+  validateSearch: searchSchema,
+  head: () => ({
+    meta: [
+      { title: "Family Tree — Yonis & Ahmed Family Record" },
+      {
+        name: "description",
+        content:
+          "Explore the documented family tree of Yonis and Ahmed: navigate generations, expand branches and open any relative's profile.",
+      },
+      { property: "og:title", content: "Family Tree — Yonis & Ahmed Family Record" },
+      {
+        property: "og:description",
+        content: "An interactive, private record of the Yonis and Ahmed family across generations.",
+      },
+    ],
+  }),
+  component: TreePage,
+});
+
+function TreePage() {
+  const { person: personParam, root: rootParam } = Route.useSearch();
+  const navigate = useNavigate({ from: "/" });
+  const { data: graph, isLoading, error } = useFamilyGraph();
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const rootId = useMemo(() => {
+    if (!graph) return null;
+    if (rootParam && graph.byId.has(rootParam)) return rootParam;
+    return graph.roots[0] ?? null;
+  }, [graph, rootParam]);
+
+  // Default view: root plus its first generation expanded.
+  useEffect(() => {
+    if (!graph || !rootId) return;
+    setExpanded((prev) => (prev.size ? prev : new Set([rootId])));
+  }, [graph, rootId]);
+
+  // Focus a person coming from search / profile links: expand their whole path.
+  useEffect(() => {
+    if (!graph || !personParam || !graph.byId.has(personParam)) return;
+    const path = ancestryPath(graph, personParam).map((p) => p.id);
+    setExpanded((prev) => new Set([...prev, ...path, personParam]));
+    setSelected(personParam);
+  }, [graph, personParam]);
+
+  const toggle = useCallback((id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const select = useCallback(
+    (id: string) => {
+      setSelected(id);
+      navigate({ search: (prev) => ({ ...prev, person: id }), replace: true });
+    },
+    [navigate],
+  );
+
+  const expandAllFrom = () => {
+    if (!graph || !rootId) return;
+    const all = new Set<string>();
+    const stack = [rootId];
+    while (stack.length) {
+      const cur = stack.pop()!;
+      all.add(cur);
+      stack.push(...(graph.childrenOf.get(cur) ?? []));
+    }
+    setExpanded(all);
+  };
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <AppShell wide>
+      <div className="relative h-[calc(100vh-8.5rem)] w-full">
+        {isLoading && (
+          <div className="flex h-full items-center justify-center gap-2 text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" /> Loading the family record…
+          </div>
+        )}
+        {error && (
+          <div className="flex h-full items-center justify-center text-destructive">
+            Could not load the family data.
+          </div>
+        )}
+        {graph && rootId && (
+          <>
+            <div className="pointer-events-none absolute left-4 top-4 z-20 flex flex-wrap gap-2">
+              <div className="pointer-events-auto rounded-full border border-border bg-card/90 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur">
+                Tap a name to open the profile · use the arrow to expand a branch
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="pointer-events-auto rounded-full bg-card/90"
+                onClick={expandAllFrom}
+              >
+                <Maximize2 className="size-3.5" /> Expand all
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="pointer-events-auto rounded-full bg-card/90"
+                onClick={() => setExpanded(new Set([rootId]))}
+              >
+                <Minimize2 className="size-3.5" /> Collapse
+              </Button>
+            </div>
+            <FamilyTreeCanvas
+              graph={graph}
+              rootId={rootId}
+              expanded={expanded}
+              selectedId={selected}
+              onToggle={toggle}
+              onSelect={select}
+            />
+            <PersonPanel
+              graph={graph}
+              personId={selected}
+              onClose={() => setSelected(null)}
+              onNavigatePerson={select}
+            />
+          </>
+        )}
+      </div>
+    </AppShell>
   );
 }
