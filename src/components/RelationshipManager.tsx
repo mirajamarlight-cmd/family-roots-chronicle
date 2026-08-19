@@ -95,7 +95,10 @@ export function RelationshipManager({ graph }: { graph: FamilyGraph }) {
 
   const attachParent = () => {
     const check = validateParentChild(graph, newParent, personId);
-    if (!check.ok) return toast.error(check.reason);
+    if (!check.ok) {
+      toast.error(check.reason);
+      return;
+    }
     void run(async () => {
       await addParentChild(newParent, personId);
       setNewParent("");
@@ -104,7 +107,10 @@ export function RelationshipManager({ graph }: { graph: FamilyGraph }) {
 
   const attachChild = () => {
     const check = validateParentChild(graph, personId, newChild);
-    if (!check.ok) return toast.error(check.reason);
+    if (!check.ok) {
+      toast.error(check.reason);
+      return;
+    }
     void run(async () => {
       await addParentChild(personId, newChild);
       setNewChild("");
@@ -113,7 +119,10 @@ export function RelationshipManager({ graph }: { graph: FamilyGraph }) {
 
   const attachSibling = () => {
     const check = validateSibling(graph, personId, newSibling);
-    if (!check.ok) return toast.error(check.reason);
+    if (!check.ok) {
+      toast.error(check.reason);
+      return;
+    }
     void run(async () => {
       await addSibling(graph, personId, newSibling);
       setNewSibling("");
