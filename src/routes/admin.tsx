@@ -325,12 +325,15 @@ function AdminPage() {
         </Card>
       )}
 
+      {graph && <RelationshipManager graph={graph} />}
+
       <Input
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         placeholder="Filter people"
         className="mt-6 max-w-xs"
       />
+
 
       <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-card/70">
         {people.map((p) => (
