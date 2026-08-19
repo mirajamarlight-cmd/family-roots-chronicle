@@ -106,17 +106,27 @@ function StatisticsPage() {
             </CardHeader>
             <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {stats.branches.map((b) => (
-                <Link
+                <div
                   key={b.id}
-                  to="/"
-                  search={{ person: b.id }}
-                  className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm transition-colors hover:bg-secondary/60"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
                 >
-                  <span>{b.name}</span>
-                  <span className="text-muted-foreground tabular-nums">{b.size}</span>
-                </Link>
+                  <Link to="/" search={{ person: b.id }} className="hover:underline">
+                    {b.name}
+                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to="/"
+                      search={{ root: b.id }}
+                      className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-secondary/60"
+                    >
+                      View branch
+                    </Link>
+                    <span className="text-muted-foreground tabular-nums">{b.size}</span>
+                  </div>
+                </div>
               ))}
             </CardContent>
+
           </Card>
         </div>
       )}

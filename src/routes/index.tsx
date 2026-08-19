@@ -48,11 +48,23 @@ function TreePage() {
     return graph.roots[0] ?? null;
   }, [graph, rootParam]);
 
-  // Default view: root plus its first generation expanded.
+  // Default view: the root plus its direct children visible (grandchildren collapsed).
   useEffect(() => {
     if (!graph || !rootId) return;
-    setExpanded((prev) => (prev.size ? prev : new Set([rootId])));
+    setExpanded(new Set([rootId]));
+    setSelected(null);
   }, [graph, rootId]);
+
+  // Branches available for quick focus (top-level branch ancestors).
+  const branches = useMemo(() => {
+    if (!graph) return [];
+    const ids = new Set<string>();
+    for (const b of graph.branchOf.values()) if (b) ids.add(b);
+    return [...ids]
+      .map((id) => ({ id, name: graph.byId.get(id)?.display_name ?? "Unknown" }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [graph]);
+
 
   // Focus a person coming from search / profile links: expand their whole path.
   useEffect(() => {
@@ -126,7 +138,28 @@ function TreePage() {
               >
                 <Minimize2 className="size-3.5" /> Collapse
               </Button>
+              {branches.length > 0 && (
+                <select
+                  value={rootParam && branches.some((b) => b.id === rootParam) ? rootParam : ""}
+                  onChange={(e) =>
+                    navigate({
+                      search: () => (e.target.value ? { root: e.target.value } : {}),
+                      replace: true,
+                    })
+                  }
+                  aria-label="Focus a branch"
+                  className="pointer-events-auto rounded-full border border-border bg-card/90 px-3 py-1.5 text-xs backdrop-blur"
+                >
+                  <option value="">Whole family</option>
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}&apos;s branch
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
+
             <FamilyTreeCanvas
               graph={graph}
               rootId={rootId}
