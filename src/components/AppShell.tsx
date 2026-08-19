@@ -3,6 +3,7 @@ import { BarChart3, Search, Settings, TreeDeciduous, Users } from "lucide-react"
 import type { ReactNode } from "react";
 
 import { BuiltByRaafat } from "@/components/brand/built-by-raafat";
+import { SITE_LOGO_PATH } from "@/lib/brand";
 
 const NAV = [
   { to: "/", label: "Family Tree", icon: TreeDeciduous },
@@ -17,8 +18,12 @@ export function AppShell({ children, wide }: { children: ReactNode; wide?: boole
     <div className="flex min-h-screen flex-col parchment">
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/85 backdrop-blur">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <TreeDeciduous className="size-5 text-primary" aria-hidden />
+          <Link to="/" className="flex items-center gap-2.5">
+            <img
+              src={SITE_LOGO_PATH}
+              alt=""
+              className="size-9 rounded-full border border-border object-cover shadow-sm"
+            />
             <span className="font-display text-lg font-semibold tracking-tight">Family Tree</span>
           </Link>
           <nav className="-mx-1 flex items-center gap-1 overflow-x-auto">

@@ -16,6 +16,7 @@ import { useEffect, useMemo } from "react";
 
 import { cn } from "@/lib/utils";
 import type { FamilyGraph } from "@/lib/family";
+import { personPortraitUrl } from "@/lib/brand";
 
 const NODE_WIDTH = 176;
 const H_GAP = 26;
@@ -23,6 +24,7 @@ const V_GAP = 132;
 
 export type TreeNodeData = {
   label: string;
+  photoUrl: string | null;
   childCount: number;
   hiddenChildren: boolean;
   expanded: boolean;
@@ -45,16 +47,35 @@ function PersonNode({ data }: NodeProps) {
         onClick={d.onSelect}
         className={cn(
           "w-full rounded-xl border bg-card px-3 py-2.5 text-left leaf-shadow transition-all",
+          d.photoUrl && d.depth === 0 && "pt-3",
           d.selected
             ? "border-primary ring-2 ring-primary/35"
             : "border-border hover:border-primary/45",
         )}
       >
-        <span className="block h-1 w-8 rounded-full" style={{ backgroundColor: genColor }} />
-        <span className="mt-2 block truncate font-display text-base font-semibold leading-tight">
+        {d.photoUrl ? (
+          <img
+            src={d.photoUrl}
+            alt=""
+            className={cn(
+              "mx-auto rounded-full border border-border object-cover",
+              d.depth === 0 ? "mb-2 size-16" : "mb-1.5 size-10",
+            )}
+          />
+        ) : (
+          <span className="block h-1 w-8 rounded-full" style={{ backgroundColor: genColor }} />
+        )}
+        <span
+          className={cn(
+            "block truncate font-display text-base font-semibold leading-tight",
+            d.photoUrl && "text-center",
+          )}
+        >
           {d.label}
         </span>
-        <span className="mt-0.5 block text-xs text-muted-foreground">
+        <span
+          className={cn("mt-0.5 block text-xs text-muted-foreground", d.photoUrl && "text-center")}
+        >
           {d.childCount === 0 ? "No children recorded" : `${d.childCount} children`}
         </span>
       </button>
@@ -112,6 +133,7 @@ function buildFlow(props: Props): { nodes: Node[]; edges: Edge[] } {
       position: { x, y: depth * V_GAP },
       data: {
         label: person?.display_name ?? "Unknown",
+        photoUrl: personPortraitUrl(graph, id),
         childCount: allChildren.length,
         hiddenChildren: allChildren.length > 0 && !expanded.has(id),
         expanded: expanded.has(id),

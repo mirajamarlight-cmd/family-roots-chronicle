@@ -1,7 +1,9 @@
 import { X } from "lucide-react";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { personPortraitUrl } from "@/lib/brand";
 import { ancestryPath, descendantCount, siblingsOf, type FamilyGraph } from "@/lib/family";
 
 function Names({
@@ -50,18 +52,27 @@ export function PersonPanel({
   const spouses = graph.spousesOf.get(person.id) ?? [];
   const siblings = siblingsOf(graph, person.id);
   const path = ancestryPath(graph, person.id);
+  const portraitUrl = personPortraitUrl(graph, person.id);
 
   return (
     <aside className="absolute right-0 top-0 z-30 flex h-full w-full max-w-sm flex-col gap-5 overflow-y-auto border-l border-border bg-card/95 p-5 backdrop-blur">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="font-display text-xl font-semibold tracking-tight">
-            {person.display_name}
-          </h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Generation {(graph.depthOf.get(person.id) ?? 0) + 1} ·{" "}
-            {descendantCount(graph, person.id)} descendants
-          </p>
+        <div className="flex min-w-0 items-start gap-3">
+          {portraitUrl && (
+            <Avatar className="size-16 shrink-0 border border-border">
+              <AvatarImage src={portraitUrl} alt={person.display_name} />
+              <AvatarFallback>{person.display_name.slice(0, 1)}</AvatarFallback>
+            </Avatar>
+          )}
+          <div className="min-w-0">
+            <h2 className="font-display text-xl font-semibold tracking-tight">
+              {person.display_name}
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Generation {(graph.depthOf.get(person.id) ?? 0) + 1} ·{" "}
+              {descendantCount(graph, person.id)} descendants
+            </p>
+          </div>
         </div>
         <Button size="icon" variant="ghost" aria-label="Close profile" onClick={onClose}>
           <X className="size-4" />
