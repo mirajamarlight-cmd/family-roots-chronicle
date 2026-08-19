@@ -48,11 +48,23 @@ function TreePage() {
     return graph.roots[0] ?? null;
   }, [graph, rootParam]);
 
-  // Default view: root plus its first generation expanded.
+  // Default view: the root plus its direct children visible (grandchildren collapsed).
   useEffect(() => {
     if (!graph || !rootId) return;
-    setExpanded((prev) => (prev.size ? prev : new Set([rootId])));
+    setExpanded(new Set([rootId]));
+    setSelected(null);
   }, [graph, rootId]);
+
+  // Branches available for quick focus (top-level branch ancestors).
+  const branches = useMemo(() => {
+    if (!graph) return [];
+    const ids = new Set<string>();
+    for (const b of graph.branchOf.values()) if (b) ids.add(b);
+    return [...ids]
+      .map((id) => ({ id, name: graph.byId.get(id)?.display_name ?? "Unknown" }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [graph]);
+
 
   // Focus a person coming from search / profile links: expand their whole path.
   useEffect(() => {
