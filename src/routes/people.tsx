@@ -63,20 +63,29 @@ function PeoplePage() {
       <ul className="mt-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {graph &&
           people.map((p) => (
-            <li key={p.id}>
-              <Link
-                to="/"
-                search={{ person: p.id }}
-                className="block rounded-lg border border-border bg-card/70 px-4 py-3 transition-colors hover:bg-secondary/60"
-              >
+            <li
+              key={p.id}
+              className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card/70 px-4 py-3"
+            >
+              <Link to="/" search={{ person: p.id }} className="min-w-0 flex-1">
                 <span className="font-medium">{p.display_name}</span>
                 <span className="mt-0.5 block text-xs text-muted-foreground">
                   Generation {(graph.depthOf.get(p.id) ?? 0) + 1} ·{" "}
                   {descendantCount(graph, p.id)} descendants
                 </span>
               </Link>
+              {(graph.childrenOf.get(p.id)?.length ?? 0) > 0 && (
+                <Link
+                  to="/"
+                  search={{ root: p.id }}
+                  className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-secondary/60"
+                >
+                  View branch
+                </Link>
+              )}
             </li>
           ))}
+
       </ul>
     </AppShell>
   );
