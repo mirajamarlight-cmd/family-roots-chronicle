@@ -80,7 +80,9 @@ export function buildGraph(people: Person[], links: Link[], marriages: Marriage[
   }
 
   const sortByName = (ids: string[]) =>
-    ids.sort((a, b) => (byId.get(a)?.display_name ?? "").localeCompare(byId.get(b)?.display_name ?? ""));
+    ids.sort((a, b) =>
+      (byId.get(a)?.display_name ?? "").localeCompare(byId.get(b)?.display_name ?? ""),
+    );
   childrenOf.forEach(sortByName);
 
   const roots = people.filter((p) => !parentsOf.has(p.id)).map((p) => p.id);

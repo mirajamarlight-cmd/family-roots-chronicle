@@ -22,7 +22,8 @@ export const Route = createFileRoute("/admin")({
       { title: "Admin — Yonis & Ahmed Family Record" },
       {
         name: "description",
-        content: "Private administration area for maintaining the documented Yonis and Ahmed family records.",
+        content:
+          "Private administration area for maintaining the documented Yonis and Ahmed family records.",
       },
       { property: "og:title", content: "Admin — Yonis & Ahmed Family Record" },
       {
@@ -71,9 +72,7 @@ function AdminPage() {
   const people = useMemo(() => {
     if (!graph) return [];
     const q = filter.trim().toLowerCase();
-    return graph.people
-      .filter((p) => !q || p.display_name.toLowerCase().includes(q))
-      .slice(0, 100);
+    return graph.people.filter((p) => !q || p.display_name.toLowerCase().includes(q));
   }, [graph, filter]);
 
   const signIn = async (mode: "in" | "up") => {
@@ -150,9 +149,11 @@ function AdminPage() {
         return;
       }
       if (draft.parent_id) {
-        const { error: linkError } = await supabase
-          .from("parent_child")
-          .insert({ parent_id: draft.parent_id, child_id: data.id, relationship_type: "biological" });
+        const { error: linkError } = await supabase.from("parent_child").insert({
+          parent_id: draft.parent_id,
+          child_id: data.id,
+          relationship_type: "biological",
+        });
         if (linkError) toast.error(linkError.message);
       }
     }
@@ -335,7 +336,6 @@ function AdminPage() {
         placeholder="Filter people"
         className="mt-6 max-w-xs"
       />
-
 
       <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-card/70">
         {people.map((p) => (

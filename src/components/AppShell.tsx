@@ -2,6 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { BarChart3, Search, Settings, TreeDeciduous, Users } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { BuiltByRaafat } from "@/components/brand/built-by-raafat";
+
 const NAV = [
   { to: "/", label: "Family Tree", icon: TreeDeciduous },
   { to: "/search", label: "Search", icon: Search },
@@ -35,9 +37,15 @@ export function AppShell({ children, wide }: { children: ReactNode; wide?: boole
           </nav>
         </div>
       </header>
-      <main className={wide ? "flex-1" : "mx-auto w-full max-w-7xl flex-1 px-4 py-8"}>{children}</main>
-      <footer className="border-t border-border/70 px-4 py-5 text-center text-xs text-muted-foreground">
-        A private family record. Only documented information is shown; unknown details are left blank.
+      <main className={wide ? "flex-1" : "mx-auto w-full max-w-7xl flex-1 px-4 py-8"}>
+        {children}
+      </main>
+      <footer className="space-y-2 border-t border-border/70 px-4 py-5 text-center text-xs text-muted-foreground">
+        <p>
+          A private family record. Only documented information is shown; unknown details are left
+          blank.
+        </p>
+        <BuiltByRaafat />
       </footer>
     </div>
   );

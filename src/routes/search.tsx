@@ -13,7 +13,8 @@ export const Route = createFileRoute("/search")({
       { title: "Search Relatives — Yonis & Ahmed Family Record" },
       {
         name: "description",
-        content: "Search the Yonis and Ahmed family record by name and jump straight to a relative's place in the tree.",
+        content:
+          "Search the Yonis and Ahmed family record by name and jump straight to a relative's place in the tree.",
       },
       { property: "og:title", content: "Search Relatives — Yonis & Ahmed Family Record" },
       {
@@ -29,10 +30,7 @@ function SearchPage() {
   const { data: graph, isLoading } = useFamilyGraph();
   const [query, setQuery] = useState("");
 
-  const results = useMemo(
-    () => (graph ? searchPeople(graph, query) : []),
-    [graph, query],
-  );
+  const results = useMemo(() => (graph ? searchPeople(graph, query) : []), [graph, query]);
 
   return (
     <AppShell>

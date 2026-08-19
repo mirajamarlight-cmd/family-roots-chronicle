@@ -13,7 +13,8 @@ export const Route = createFileRoute("/people")({
       { title: "All People — Yonis & Ahmed Family Record" },
       {
         name: "description",
-        content: "A complete alphabetical directory of every documented member of the Yonis and Ahmed family.",
+        content:
+          "A complete alphabetical directory of every documented member of the Yonis and Ahmed family.",
       },
       { property: "og:title", content: "All People — Yonis & Ahmed Family Record" },
       {
@@ -70,8 +71,8 @@ function PeoplePage() {
               <Link to="/" search={{ person: p.id }} className="min-w-0 flex-1">
                 <span className="font-medium">{p.display_name}</span>
                 <span className="mt-0.5 block text-xs text-muted-foreground">
-                  Generation {(graph.depthOf.get(p.id) ?? 0) + 1} ·{" "}
-                  {descendantCount(graph, p.id)} descendants
+                  Generation {(graph.depthOf.get(p.id) ?? 0) + 1} · {descendantCount(graph, p.id)}{" "}
+                  descendants
                 </span>
               </Link>
               {(graph.childrenOf.get(p.id)?.length ?? 0) > 0 && (

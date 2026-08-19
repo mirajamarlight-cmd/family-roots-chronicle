@@ -13,7 +13,8 @@ export const Route = createFileRoute("/statistics")({
       { title: "Family Statistics — Yonis & Ahmed Family Record" },
       {
         name: "description",
-        content: "Generation counts, branch sizes and totals across the documented Yonis and Ahmed family record.",
+        content:
+          "Generation counts, branch sizes and totals across the documented Yonis and Ahmed family record.",
       },
       { property: "og:title", content: "Family Statistics — Yonis & Ahmed Family Record" },
       {

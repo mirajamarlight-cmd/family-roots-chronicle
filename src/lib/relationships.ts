@@ -11,8 +11,10 @@ export function validateParentChild(
 ): LinkValidation {
   if (!parentId || !childId) return { ok: false, reason: "Select both people first." };
   // orphan link guard: both endpoints must exist in the record
-  if (!graph.byId.has(parentId)) return { ok: false, reason: "That parent is no longer in the record." };
-  if (!graph.byId.has(childId)) return { ok: false, reason: "That child is no longer in the record." };
+  if (!graph.byId.has(parentId))
+    return { ok: false, reason: "That parent is no longer in the record." };
+  if (!graph.byId.has(childId))
+    return { ok: false, reason: "That child is no longer in the record." };
   if (parentId === childId) return { ok: false, reason: "A person cannot be their own parent." };
 
   const duplicate = graph.links.some((l) => l.parent_id === parentId && l.child_id === childId);
@@ -33,7 +35,11 @@ export function validateParentChild(
 }
 
 /** true when `maybeDescendant` sits below `ancestorId` in the tree. */
-export function isDescendant(graph: FamilyGraph, ancestorId: string, maybeDescendant: string): boolean {
+export function isDescendant(
+  graph: FamilyGraph,
+  ancestorId: string,
+  maybeDescendant: string,
+): boolean {
   const stack = [...(graph.childrenOf.get(ancestorId) ?? [])];
   const seen = new Set<string>();
   while (stack.length) {
@@ -62,7 +68,8 @@ export function validateSibling(
   if (parents.length === 0) {
     return {
       ok: false,
-      reason: "This person has no recorded parent, so a sibling link would be an orphan. Add a parent first.",
+      reason:
+        "This person has no recorded parent, so a sibling link would be an orphan. Add a parent first.",
     };
   }
   const missing = parents.filter(
@@ -77,7 +84,11 @@ export function validateSibling(
   return { ok: true };
 }
 
-export async function addParentChild(parentId: string, childId: string, relationshipType = "biological") {
+export async function addParentChild(
+  parentId: string,
+  childId: string,
+  relationshipType = "biological",
+) {
   const { error } = await supabase
     .from("parent_child")
     .insert({ parent_id: parentId, child_id: childId, relationship_type: relationshipType });

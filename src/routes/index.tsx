@@ -48,10 +48,10 @@ function TreePage() {
     return graph.roots[0] ?? null;
   }, [graph, rootParam]);
 
-  // Default view: the root plus its direct children visible (grandchildren collapsed).
+  // Default view: root plus its direct children visible (Yonis → Ahmed when rooted at Yonis).
   useEffect(() => {
     if (!graph || !rootId) return;
-    setExpanded(new Set([rootId]));
+    setExpanded(new Set([rootId, ...(graph.childrenOf.get(rootId) ?? [])]));
     setSelected(null);
   }, [graph, rootId]);
 

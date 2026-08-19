@@ -65,7 +65,11 @@ function PersonNode({ data }: NodeProps) {
           aria-label={d.expanded ? "Collapse branch" : "Expand branch"}
           className="absolute -bottom-3 left-1/2 z-10 flex size-6 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:text-primary"
         >
-          {d.expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+          {d.expanded ? (
+            <ChevronDown className="size-3.5" />
+          ) : (
+            <ChevronRight className="size-3.5" />
+          )}
         </button>
       )}
       <Handle type="source" position={Position.Bottom} className="!opacity-0" />
@@ -142,7 +146,11 @@ function Canvas(props: Props) {
   useEffect(() => {
     if (!selectedId) return;
     const node = flow.getNode(selectedId);
-    if (node) flow.setCenter(node.position.x + NODE_WIDTH / 2, node.position.y + 40, { zoom: 0.9, duration: 500 });
+    if (node)
+      flow.setCenter(node.position.x + NODE_WIDTH / 2, node.position.y + 40, {
+        zoom: 0.9,
+        duration: 500,
+      });
   }, [selectedId, flow, nodes.length]);
 
   return (
