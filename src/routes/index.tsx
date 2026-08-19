@@ -138,7 +138,28 @@ function TreePage() {
               >
                 <Minimize2 className="size-3.5" /> Collapse
               </Button>
+              {branches.length > 0 && (
+                <select
+                  value={rootParam && branches.some((b) => b.id === rootParam) ? rootParam : ""}
+                  onChange={(e) =>
+                    navigate({
+                      search: () => (e.target.value ? { root: e.target.value } : {}),
+                      replace: true,
+                    })
+                  }
+                  aria-label="Focus a branch"
+                  className="pointer-events-auto rounded-full border border-border bg-card/90 px-3 py-1.5 text-xs backdrop-blur"
+                >
+                  <option value="">Whole family</option>
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}&apos;s branch
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
+
             <FamilyTreeCanvas
               graph={graph}
               rootId={rootId}
