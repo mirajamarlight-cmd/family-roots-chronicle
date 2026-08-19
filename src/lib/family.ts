@@ -151,6 +151,19 @@ export function ancestryPath(graph: FamilyGraph, id: string): Person[] {
   return path;
 }
 
+/** Root-to-person chain including the person, e.g. Yonis › Ahmed › Khedra. */
+export function lineageChain(graph: FamilyGraph, id: string): Person[] {
+  const person = graph.byId.get(id);
+  if (!person) return [];
+  return [...ancestryPath(graph, id), person];
+}
+
+/** Human-readable lineage for search results and duplicate-name disambiguation. */
+export function lineageLabel(graph: FamilyGraph, id: string): string {
+  const chain = lineageChain(graph, id);
+  return chain.length ? chain.map((p) => p.display_name).join(" › ") : "Unknown";
+}
+
 export function siblingsOf(graph: FamilyGraph, id: string): string[] {
   const result = new Set<string>();
   for (const parent of graph.parentsOf.get(id) ?? []) {
@@ -172,6 +185,11 @@ export function searchPeople(graph: FamilyGraph, query: string, limit = 50): Per
     if (idx === -1) continue;
     scored.push({ p, score: idx === 0 ? 0 : 1 });
   }
-  scored.sort((a, b) => a.score - b.score || a.p.display_name.localeCompare(b.p.display_name));
+  scored.sort(
+    (a, b) =>
+      a.score - b.score ||
+      a.p.display_name.localeCompare(b.p.display_name) ||
+      lineageLabel(graph, a.p.id).localeCompare(lineageLabel(graph, b.p.id)),
+  );
   return scored.slice(0, limit).map((s) => s.p);
 }
