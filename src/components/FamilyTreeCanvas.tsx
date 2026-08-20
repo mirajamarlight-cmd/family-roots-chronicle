@@ -2,6 +2,7 @@ import {
   Background,
   Controls,
   Handle,
+  MiniMap,
   Position,
   ReactFlow,
   ReactFlowProvider,
@@ -12,11 +13,12 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
 
 import { cn } from "@/lib/utils";
 import type { FamilyGraph } from "@/lib/family";
 import { personPortraitUrl } from "@/lib/brand";
+import type { FilterVisibility } from "@/lib/tree-filters";
 
 const NODE_WIDTH = 176;
 const H_GAP = 26;
@@ -29,34 +31,49 @@ export type TreeNodeData = {
   hiddenChildren: boolean;
   expanded: boolean;
   selected: boolean;
+  focused: boolean;
   depth: number;
-  onToggle: () => void;
-  onSelect: () => void;
+  dimmed: boolean;
+  matched: boolean;
 };
 
-function PersonNode({ data }: NodeProps) {
+const TreeHandlersContext = createContext<{
+  onToggle: (id: string) => void;
+  onSelect: (id: string) => void;
+} | null>(null);
+
+function PersonNode({ id, data }: NodeProps) {
   const d = data as unknown as TreeNodeData;
+  const handlers = useContext(TreeHandlersContext);
   const genColor = ["var(--gen-1)", "var(--gen-2)", "var(--gen-3)", "var(--gen-4)", "var(--gen-5)"][
     d.depth % 5
   ];
   return (
-    <div className="relative" style={{ width: NODE_WIDTH }}>
+    <div
+      className={cn("relative transition-opacity", d.dimmed && "opacity-40")}
+      style={{ width: NODE_WIDTH }}
+    >
       <Handle type="target" position={Position.Top} className="!opacity-0" />
       <button
         type="button"
-        onClick={d.onSelect}
+        data-node-id={id}
+        onClick={() => handlers?.onSelect(id)}
+        aria-label={`Open profile for ${d.label}`}
         className={cn(
           "w-full rounded-xl border bg-card px-3 py-2.5 text-left leaf-shadow transition-all",
           d.photoUrl && d.depth === 0 && "pt-3",
           d.selected
             ? "border-primary ring-2 ring-primary/35"
-            : "border-border hover:border-primary/45",
+            : d.focused
+              ? "border-primary/70 ring-2 ring-primary/20"
+              : "border-border hover:border-primary/45",
+          d.matched && !d.selected && "ring-2 ring-destructive/25",
         )}
       >
         {d.photoUrl ? (
           <img
             src={d.photoUrl}
-            alt=""
+            alt={d.label}
             className={cn(
               "mx-auto rounded-full border border-border object-cover",
               d.depth === 0 ? "mb-2 size-16" : "mb-1.5 size-10",
@@ -80,18 +97,25 @@ function PersonNode({ data }: NodeProps) {
         </span>
       </button>
       {d.childCount > 0 && (
-        <button
-          type="button"
-          onClick={d.onToggle}
-          aria-label={d.expanded ? "Collapse branch" : "Expand branch"}
-          className="absolute -bottom-3 left-1/2 z-10 flex size-6 -translate-x-1/2 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:text-primary"
-        >
-          {d.expanded ? (
-            <ChevronDown className="size-3.5" />
-          ) : (
-            <ChevronRight className="size-3.5" />
+        <div className="absolute -bottom-3 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-0.5">
+          <button
+            type="button"
+            onClick={() => handlers?.onToggle(id)}
+            aria-label={d.expanded ? "Collapse branch" : "Expand branch"}
+            className="flex size-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:text-primary"
+          >
+            {d.expanded ? (
+              <ChevronDown className="size-3.5" />
+            ) : (
+              <ChevronRight className="size-3.5" />
+            )}
+          </button>
+          {d.hiddenChildren && (
+            <span className="rounded-full bg-secondary px-1.5 py-px text-[10px] font-semibold text-muted-foreground">
+              +{d.childCount}
+            </span>
           )}
-        </button>
+        </div>
       )}
       <Handle type="source" position={Position.Bottom} className="!opacity-0" />
     </div>
@@ -100,17 +124,29 @@ function PersonNode({ data }: NodeProps) {
 
 const nodeTypes = { person: PersonNode };
 
+export type CanvasFilters = Pick<FilterVisibility, "active" | "visible" | "selfMatch">;
+
 type Props = {
   graph: FamilyGraph;
   rootId: string;
   expanded: Set<string>;
   selectedId: string | null;
+  focusedNodeId: string | null;
+  filters?: CanvasFilters;
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
+  onFocusNode: (id: string | null) => void;
+  onClosePanel?: () => void;
 };
 
-function buildFlow(props: Props): { nodes: Node[]; edges: Edge[] } {
-  const { graph, rootId, expanded, selectedId, onToggle, onSelect } = props;
+function buildFlow(
+  graph: FamilyGraph,
+  rootId: string,
+  expanded: Set<string>,
+  selectedId: string | null,
+  focusedNodeId: string | null,
+  filters: CanvasFilters | undefined,
+): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
   let cursor = 0;
@@ -127,6 +163,8 @@ function buildFlow(props: Props): { nodes: Node[]; edges: Edge[] } {
     }
     const person = graph.byId.get(id);
     const allChildren = graph.childrenOf.get(id) ?? [];
+    const filterActive = filters?.active ?? false;
+    const dimmed = filterActive && !(filters?.selfMatch.has(id) ?? false);
     nodes.push({
       id,
       type: "person",
@@ -138,9 +176,10 @@ function buildFlow(props: Props): { nodes: Node[]; edges: Edge[] } {
         hiddenChildren: allChildren.length > 0 && !expanded.has(id),
         expanded: expanded.has(id),
         selected: selectedId === id,
+        focused: focusedNodeId === id,
         depth,
-        onToggle: () => onToggle(id),
-        onSelect: () => onSelect(id),
+        dimmed,
+        matched: filters?.selfMatch.has(id) ?? false,
       } satisfies TreeNodeData as unknown as Record<string, unknown>,
       draggable: false,
     });
@@ -160,10 +199,61 @@ function buildFlow(props: Props): { nodes: Node[]; edges: Edge[] } {
   return { nodes, edges };
 }
 
-function Canvas(props: Props) {
-  const { nodes, edges } = useMemo(() => buildFlow(props), [props]);
+function buildNavMaps(nodes: Node[], edges: Edge[]) {
+  const parentOf = new Map<string, string>();
+  const childrenOf = new Map<string, string[]>();
+  for (const edge of edges) {
+    parentOf.set(edge.target, edge.source);
+    const kids = childrenOf.get(edge.source) ?? [];
+    kids.push(edge.target);
+    childrenOf.set(edge.source, kids);
+  }
+  for (const kids of childrenOf.values()) {
+    kids.sort((a, b) => {
+      const na = nodes.find((n) => n.id === a);
+      const nb = nodes.find((n) => n.id === b);
+      return (na?.position.x ?? 0) - (nb?.position.x ?? 0);
+    });
+  }
+  const orderedIds = [...nodes].sort(
+    (a, b) => a.position.y - b.position.y || a.position.x - b.position.x,
+  );
+  return { parentOf, childrenOf, orderedIds };
+}
+
+function Canvas({
+  graph,
+  rootId,
+  expanded,
+  selectedId,
+  focusedNodeId,
+  filters,
+  onToggle,
+  onSelect,
+  onFocusNode,
+  onClosePanel,
+}: Props) {
+  const { nodes, edges } = useMemo(
+    () => buildFlow(graph, rootId, expanded, selectedId, focusedNodeId, filters),
+    [graph, rootId, expanded, selectedId, focusedNodeId, filters],
+  );
   const flow = useReactFlow();
-  const { selectedId } = props;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const fitForRoot = useRef<string | null>(null);
+
+  const handlers = useMemo(() => ({ onToggle, onSelect }), [onToggle, onSelect]);
+
+  useEffect(() => {
+    if (!nodes.length || fitForRoot.current === rootId) return;
+    fitForRoot.current = rootId;
+    requestAnimationFrame(() => {
+      flow.fitView({ padding: 0.2, maxZoom: 1, minZoom: 0.4, duration: 300 });
+    });
+  }, [rootId, nodes.length, flow]);
+
+  useEffect(() => {
+    fitForRoot.current = null;
+  }, [rootId]);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -175,24 +265,120 @@ function Canvas(props: Props) {
       });
   }, [selectedId, flow, nodes.length]);
 
+  const navigateFocus = useCallback(
+    (direction: "up" | "down" | "left" | "right") => {
+      if (!nodes.length) return;
+      const { parentOf, childrenOf, orderedIds } = buildNavMaps(nodes, edges);
+      const current = focusedNodeId ?? selectedId ?? rootId;
+      if (!current) return;
+
+      let next: string | null = null;
+      if (direction === "up") {
+        next = parentOf.get(current) ?? null;
+      } else if (direction === "down") {
+        next = childrenOf.get(current)?.[0] ?? null;
+      } else {
+        const siblings =
+          current === rootId
+            ? orderedIds.filter((id) => !parentOf.has(id))
+            : (() => {
+                const parent = parentOf.get(current);
+                return parent ? (childrenOf.get(parent) ?? []) : orderedIds;
+              })();
+        const idx = siblings.indexOf(current);
+        if (idx !== -1) {
+          if (direction === "left" && idx > 0) next = siblings[idx - 1]!;
+          if (direction === "right" && idx < siblings.length - 1) next = siblings[idx + 1]!;
+        }
+      }
+
+      if (next) {
+        onFocusNode(next);
+        const node = flow.getNode(next);
+        if (node)
+          flow.setCenter(node.position.x + NODE_WIDTH / 2, node.position.y + 40, {
+            zoom: flow.getZoom(),
+            duration: 200,
+          });
+      }
+    },
+    [nodes, edges, focusedNodeId, selectedId, rootId, onFocusNode, flow],
+  );
+
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        navigateFocus("up");
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        navigateFocus("down");
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        navigateFocus("left");
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        navigateFocus("right");
+      } else if (e.key === "Enter" && (focusedNodeId ?? selectedId)) {
+        e.preventDefault();
+        onSelect(focusedNodeId ?? selectedId!);
+      } else if (e.key === " " && (focusedNodeId ?? selectedId)) {
+        e.preventDefault();
+        onToggle(focusedNodeId ?? selectedId!);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        onClosePanel?.();
+      }
+    },
+    [navigateFocus, focusedNodeId, selectedId, onSelect, onToggle, onClosePanel],
+  );
+
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      fitView
-      fitViewOptions={{ padding: 0.2, maxZoom: 1, minZoom: 0.4 }}
-      minZoom={0.15}
-      maxZoom={1.6}
-      nodesDraggable={false}
-      nodesConnectable={false}
-      elementsSelectable={false}
-      proOptions={{ hideAttribution: true }}
-      className="bg-transparent"
+    <div
+      ref={containerRef}
+      className="h-full w-full outline-none"
+      tabIndex={0}
+      role="tree"
+      aria-label="Family tree"
+      onKeyDown={onKeyDown}
     >
-      <Background color="var(--border)" gap={28} size={1.5} />
-      <Controls showInteractive={false} className="!rounded-lg !border !border-border !bg-card" />
-    </ReactFlow>
+      <TreeHandlersContext.Provider value={handlers}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          minZoom={0.15}
+          maxZoom={1.6}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={false}
+          proOptions={{ hideAttribution: true }}
+          className="bg-transparent"
+        >
+          <Background color="var(--border)" gap={28} size={1.5} />
+          <Controls
+            showInteractive={false}
+            className="!rounded-lg !border !border-border !bg-card"
+          />
+          <MiniMap
+            className="!hidden sm:!block !rounded-lg !border !border-border !bg-card/90"
+            nodeColor={(node) => {
+              const depth = (node.data as TreeNodeData)?.depth ?? 0;
+              return [
+                "var(--gen-1)",
+                "var(--gen-2)",
+                "var(--gen-3)",
+                "var(--gen-4)",
+                "var(--gen-5)",
+              ][depth % 5]!;
+            }}
+            maskColor="oklch(0.4 0.03 70 / 0.08)"
+            pannable
+            zoomable
+          />
+        </ReactFlow>
+      </TreeHandlersContext.Provider>
+    </div>
   );
 }
 

@@ -5,86 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { descendantCount, type FamilyGraph } from "@/lib/family";
+import { computeVisibility } from "@/lib/tree-filters";
 import { cn } from "@/lib/utils";
-
-const BRANCH_COLORS = [
-  "oklch(0.68 0.09 68)",
-  "oklch(0.44 0.062 148)",
-  "oklch(0.52 0.17 27)",
-  "oklch(0.58 0.06 250)",
-  "oklch(0.53 0.075 128)",
-  "oklch(0.6 0.08 40)",
-  "oklch(0.5 0.05 300)",
-  "oklch(0.62 0.11 32)",
-];
-
-function branchColor(branchKey: string): string {
-  let h = 0;
-  for (let i = 0; i < branchKey.length; i++) h = (h * 31 + branchKey.charCodeAt(i)) >>> 0;
-  return BRANCH_COLORS[h % BRANCH_COLORS.length]!;
-}
-
-type Filters = {
-  query: string;
-  branchId: string;
-  gen: number | null;
-};
-
-function personMatches(graph: FamilyGraph, id: string, filters: Filters): boolean {
-  const person = graph.byId.get(id);
-  if (!person) return false;
-
-  const q = filters.query.trim().toLowerCase();
-  if (q && !person.display_name.toLowerCase().includes(q)) return false;
-
-  if (filters.branchId) {
-    const branch = graph.branchOf.get(id);
-    if (id !== filters.branchId && branch !== filters.branchId) return false;
-  }
-
-  if (filters.gen !== null) {
-    const gen = (graph.depthOf.get(id) ?? 0) + 1;
-    if (gen !== filters.gen) return false;
-  }
-
-  return true;
-}
-
-function computeVisibility(graph: FamilyGraph, filters: Filters) {
-  const active = !!filters.query.trim() || !!filters.branchId || filters.gen !== null;
-  if (!active) {
-    return {
-      active: false,
-      visible: new Set(graph.people.map((p) => p.id)),
-      selfMatch: new Set<string>(),
-      matchCount: 0,
-    };
-  }
-
-  const selfMatch = new Set<string>();
-  let matchCount = 0;
-  for (const person of graph.people) {
-    if (personMatches(graph, person.id, filters)) {
-      selfMatch.add(person.id);
-      matchCount++;
-    }
-  }
-
-  const visible = new Set<string>();
-  const markVisible = (id: string): boolean => {
-    const children = graph.childrenOf.get(id) ?? [];
-    let childVisible = false;
-    for (const child of children) {
-      if (markVisible(child)) childVisible = true;
-    }
-    const show = selfMatch.has(id) || childVisible;
-    if (show) visible.add(id);
-    return show;
-  };
-  for (const root of graph.roots) markVisible(root);
-
-  return { active: true, visible, selfMatch, matchCount };
-}
 
 function highlightName(name: string, query: string) {
   const q = query.trim();
@@ -101,6 +23,23 @@ function highlightName(name: string, query: string) {
       {name.slice(idx + q.length)}
     </>
   );
+}
+
+const BRANCH_COLORS = [
+  "oklch(0.68 0.09 68)",
+  "oklch(0.44 0.062 148)",
+  "oklch(0.52 0.17 27)",
+  "oklch(0.58 0.06 250)",
+  "oklch(0.53 0.075 128)",
+  "oklch(0.6 0.08 40)",
+  "oklch(0.5 0.05 300)",
+  "oklch(0.62 0.11 32)",
+];
+
+function branchColor(branchKey: string): string {
+  let h = 0;
+  for (let i = 0; i < branchKey.length; i++) h = (h * 31 + branchKey.charCodeAt(i)) >>> 0;
+  return BRANCH_COLORS[h % BRANCH_COLORS.length]!;
 }
 
 function TreeNode({

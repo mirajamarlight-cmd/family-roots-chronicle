@@ -1,10 +1,26 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { fetchFamilyGraph, type FamilyGraph } from "@/lib/family";
 
 export function useFamilyGraph() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const invalidate = () => {
+      void queryClient.invalidateQueries({ queryKey: ["family-graph"] });
+    };
+    const channel = supabase
+      .channel("family-graph-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "people" }, invalidate)
+      .on("postgres_changes", { event: "*", schema: "public", table: "parent_child" }, invalidate)
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   return useQuery<FamilyGraph>({
     queryKey: ["family-graph"],
     queryFn: fetchFamilyGraph,

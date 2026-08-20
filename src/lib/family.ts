@@ -41,20 +41,15 @@ const PERSON_COLUMNS =
   "id, first_name, middle_name, last_name, display_name, gender, birth_date, death_date, photo_url, notes";
 
 export async function fetchFamilyGraph(): Promise<FamilyGraph> {
-  const [peopleRes, linkRes, marriageRes] = await Promise.all([
+  const [peopleRes, linkRes] = await Promise.all([
     supabase.from("people").select(PERSON_COLUMNS).order("display_name"),
     supabase.from("parent_child").select("id, parent_id, child_id, relationship_type"),
-    supabase.from("marriages").select("id, person1_id, person2_id, marriage_date, notes"),
   ]);
   if (peopleRes.error) throw peopleRes.error;
   if (linkRes.error) throw linkRes.error;
-  if (marriageRes.error) throw marriageRes.error;
 
-  return buildGraph(
-    (peopleRes.data ?? []) as Person[],
-    (linkRes.data ?? []) as Link[],
-    (marriageRes.data ?? []) as Marriage[],
-  );
+  // ponytail: marriages table stays in DB for later; V1 UI omits spouse data entirely.
+  return buildGraph((peopleRes.data ?? []) as Person[], (linkRes.data ?? []) as Link[], []);
 }
 
 export function buildGraph(people: Person[], links: Link[], marriages: Marriage[]): FamilyGraph {
@@ -162,6 +157,25 @@ export function lineageChain(graph: FamilyGraph, id: string): Person[] {
 export function lineageLabel(graph: FamilyGraph, id: string): string {
   const chain = lineageChain(graph, id);
   return chain.length ? chain.map((p) => p.display_name).join(" › ") : "Unknown";
+}
+
+/** Root id to focus when viewing a person's branch in the tree. */
+export function branchFocusId(graph: FamilyGraph, personId: string): string | null {
+  const branch = graph.branchOf.get(personId);
+  if (branch) return branch;
+  if ((graph.childrenOf.get(personId)?.length ?? 0) > 0) return personId;
+  return null;
+}
+
+/** Lineage from a subtree root down to a target person (inclusive). */
+export function pathWithinRoot(graph: FamilyGraph, rootId: string, targetId: string): Person[] {
+  const chain = lineageChain(graph, targetId);
+  const start = chain.findIndex((p) => p.id === rootId);
+  if (start === -1) {
+    const root = graph.byId.get(rootId);
+    return root ? [root] : chain;
+  }
+  return chain.slice(start);
 }
 
 export function siblingsOf(graph: FamilyGraph, id: string): string[] {
