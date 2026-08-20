@@ -55,7 +55,7 @@ function StatisticsPage() {
 
   return (
     <AppShell>
-      <h1 className="font-display text-3xl font-semibold tracking-tight">Statistics</h1>
+      <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">Statistics</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Counts derived only from documented records.
       </p>
@@ -85,8 +85,8 @@ function StatisticsPage() {
             </CardHeader>
             <CardContent className="space-y-2">
               {stats.generations.map(([depth, count]) => (
-                <div key={depth} className="flex items-center gap-3 text-sm">
-                  <span className="w-24 shrink-0 text-muted-foreground">
+                <div key={depth} className="flex items-center gap-2 text-sm sm:gap-3">
+                  <span className="w-20 shrink-0 text-xs text-muted-foreground sm:w-24 sm:text-sm">
                     Generation {depth + 1}
                   </span>
                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
@@ -105,7 +105,7 @@ function StatisticsPage() {
             <CardHeader>
               <CardTitle className="text-base">Branches</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <CardContent className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {stats.branches.map((b) => (
                 <div
                   key={b.id}

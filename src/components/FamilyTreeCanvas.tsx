@@ -181,7 +181,7 @@ function Canvas(props: Props) {
       edges={edges}
       nodeTypes={nodeTypes}
       fitView
-      fitViewOptions={{ padding: 0.25, maxZoom: 1 }}
+      fitViewOptions={{ padding: 0.2, maxZoom: 1, minZoom: 0.4 }}
       minZoom={0.15}
       maxZoom={1.6}
       nodesDraggable={false}

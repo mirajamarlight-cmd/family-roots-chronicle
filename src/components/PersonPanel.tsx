@@ -55,7 +55,7 @@ export function PersonPanel({
   const portraitUrl = personPortraitUrl(graph, person.id);
 
   return (
-    <aside className="absolute right-0 top-0 z-30 flex h-full w-full max-w-sm flex-col gap-5 overflow-y-auto border-l border-border bg-card/95 p-5 backdrop-blur">
+    <aside className="absolute inset-x-0 bottom-0 z-30 flex max-h-[78%] w-full flex-col gap-5 overflow-y-auto rounded-t-2xl border-t border-border bg-card/95 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-[0_-8px_30px_oklch(0.4_0.03_70_/_0.15)] backdrop-blur sm:inset-auto sm:right-0 sm:top-0 sm:h-full sm:max-h-none sm:max-w-sm sm:rounded-none sm:border-l sm:border-t-0 sm:pb-5 sm:shadow-none">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           {portraitUrl && (
