@@ -125,7 +125,7 @@ function TreePage() {
               <Button
                 size="sm"
                 variant="outline"
-                className="pointer-events-auto rounded-full bg-card/90"
+                className="pointer-events-auto shrink-0 rounded-full bg-card/90 px-3 text-xs"
                 onClick={expandAllFrom}
               >
                 <Maximize2 className="size-3.5" /> Expand all
@@ -133,7 +133,7 @@ function TreePage() {
               <Button
                 size="sm"
                 variant="outline"
-                className="pointer-events-auto rounded-full bg-card/90"
+                className="pointer-events-auto shrink-0 rounded-full bg-card/90 px-3 text-xs"
                 onClick={() => setExpanded(new Set([rootId]))}
               >
                 <Minimize2 className="size-3.5" /> Collapse
@@ -148,7 +148,7 @@ function TreePage() {
                     })
                   }
                   aria-label="Focus a branch"
-                  className="pointer-events-auto rounded-full border border-border bg-card/90 px-3 py-1.5 text-xs backdrop-blur"
+                  className="pointer-events-auto h-8 max-w-[9.5rem] shrink-0 rounded-full border border-border bg-card/90 px-3 text-xs backdrop-blur sm:max-w-none sm:py-1.5"
                 >
                   <option value="">Whole family</option>
                   {branches.map((b) => (
