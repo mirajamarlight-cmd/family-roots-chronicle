@@ -105,7 +105,7 @@ function TreePage() {
 
   return (
     <AppShell wide>
-      <div className="relative h-[calc(100vh-8.5rem)] w-full">
+      <div className="relative h-[calc(100dvh-4.25rem-4rem-env(safe-area-inset-bottom))] w-full md:h-[calc(100dvh-8.5rem)]">
         {isLoading && (
           <div className="flex h-full items-center justify-center gap-2 text-muted-foreground">
             <Loader2 className="size-4 animate-spin" /> Loading the family record…
@@ -118,8 +118,8 @@ function TreePage() {
         )}
         {graph && rootId && (
           <>
-            <div className="pointer-events-none absolute left-4 top-4 z-20 flex flex-wrap gap-2">
-              <div className="pointer-events-auto rounded-full border border-border bg-card/90 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur">
+            <div className="pointer-events-none absolute inset-x-0 top-2 z-20 flex flex-nowrap items-center gap-2 overflow-x-auto px-3 pb-1 sm:inset-x-auto sm:left-4 sm:top-4 sm:flex-wrap sm:overflow-visible sm:px-0">
+              <div className="pointer-events-auto hidden shrink-0 rounded-full border border-border bg-card/90 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur sm:block">
                 Tap a name to open the profile · use the arrow to expand a branch
               </div>
               <Button
