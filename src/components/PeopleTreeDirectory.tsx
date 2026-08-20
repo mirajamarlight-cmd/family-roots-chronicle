@@ -329,7 +329,7 @@ export function PeopleTreeDirectory({
           value={branchId}
           onChange={(e) => setBranchId(e.target.value)}
           className={cn(
-            "h-9 rounded-md border border-input bg-background px-3 text-sm",
+            "h-9 w-full rounded-md border border-input bg-background px-3 text-sm sm:w-auto",
             branchId && "border-primary bg-secondary/40",
           )}
         >
@@ -340,25 +340,45 @@ export function PeopleTreeDirectory({
             </option>
           ))}
         </select>
-        {active && (
-          <span className="min-w-[5rem] text-right text-xs text-muted-foreground">
-            {matchCount} {matchCount === 1 ? "match" : "matches"}
-          </span>
-        )}
-        <Button type="button" variant="outline" size="sm" onClick={expandAll}>
-          Expand all
-        </Button>
-        <Button type="button" variant="outline" size="sm" onClick={collapseAll}>
-          Collapse
-        </Button>
-        {(query || branchId || gen !== null) && (
-          <Button type="button" variant="outline" size="sm" onClick={clearFilters}>
-            Clear filters
+        <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+          {active && (
+            <span className="shrink-0 text-xs text-muted-foreground sm:min-w-[5rem] sm:text-right">
+              {matchCount} {matchCount === 1 ? "match" : "matches"}
+            </span>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={expandAll}
+          >
+            Expand all
           </Button>
-        )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={collapseAll}
+          >
+            Collapse
+          </Button>
+          {(query || branchId || gen !== null) && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={clearFilters}
+            >
+              Clear filters
+            </Button>
+          )}
+        </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      <div className="-mx-4 mt-3 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
         <button
           type="button"
           onClick={() => setGen(null)}
