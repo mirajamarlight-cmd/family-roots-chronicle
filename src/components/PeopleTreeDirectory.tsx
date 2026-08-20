@@ -210,7 +210,7 @@ export function PeopleTreeDirectory({
   graph,
   isLoading,
 }: {
-  graph?: FamilyGraph;
+  graph?: FamilyGraph | undefined;
   isLoading: boolean;
 }) {
   const [query, setQuery] = useState("");
