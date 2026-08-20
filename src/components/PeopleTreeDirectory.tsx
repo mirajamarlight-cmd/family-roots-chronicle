@@ -383,7 +383,7 @@ export function PeopleTreeDirectory({
           type="button"
           onClick={() => setGen(null)}
           className={cn(
-            "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+            "shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
             gen === null
               ? "border-primary bg-primary text-primary-foreground"
               : "border-border bg-card text-muted-foreground hover:border-primary/50",
@@ -397,7 +397,7 @@ export function PeopleTreeDirectory({
             type="button"
             onClick={() => setGen(g)}
             className={cn(
-              "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+              "shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
               gen === g
                 ? "border-primary bg-primary text-primary-foreground"
                 : "border-border bg-card text-muted-foreground hover:border-primary/50",

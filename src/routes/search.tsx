@@ -43,12 +43,12 @@ function SearchPage() {
 
   return (
     <AppShell>
-      <h1 className="font-display text-3xl font-semibold tracking-tight">Search</h1>
+      <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">Search</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Search by any part of a name across the documented family record.
       </p>
 
-      <div className="relative mt-6 max-w-lg">
+      <div className="relative mt-6 w-full max-w-lg">
         <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={query}

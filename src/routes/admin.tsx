@@ -209,7 +209,7 @@ function AdminPage() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            <div className="flex gap-2 pt-1">
+            <div className="flex flex-col gap-2 pt-1 sm:flex-row">
               <Button onClick={() => signIn("in")} disabled={busy} className="flex-1">
                 Sign in
               </Button>
@@ -250,16 +250,16 @@ function AdminPage() {
 
   return (
     <AppShell>
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Admin</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">Admin</h1>
           <p className="mt-1 text-sm text-muted-foreground">Signed in as {email}</p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setDraft({ ...emptyDraft })}>
+        <div className="flex flex-wrap gap-2">
+          <Button className="flex-1 sm:flex-none" onClick={() => setDraft({ ...emptyDraft })}>
             <Plus className="size-4" /> Add person
           </Button>
-          <Button variant="outline" onClick={() => supabase.auth.signOut()}>
+          <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => supabase.auth.signOut()}>
             Sign out
           </Button>
         </div>
@@ -270,7 +270,7 @@ function AdminPage() {
           <CardHeader>
             <CardTitle className="text-base">{draft.id ? "Edit person" : "New person"}</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2">
+          <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {(
               [
                 ["first_name", "First name"],
@@ -316,7 +316,7 @@ function AdminPage() {
                 onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
               />
             </div>
-            <div className="flex gap-2 sm:col-span-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:col-span-2">
               <Button onClick={save} disabled={busy}>
                 Save
               </Button>
@@ -334,7 +334,7 @@ function AdminPage() {
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         placeholder="Filter people"
-        className="mt-6 max-w-xs"
+        className="mt-6 w-full max-w-xs"
       />
 
       <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-card/70">
