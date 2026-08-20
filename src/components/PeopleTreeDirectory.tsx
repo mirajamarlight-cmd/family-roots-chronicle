@@ -294,7 +294,7 @@ export function PeopleTreeDirectory({
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">People</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">People</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Browse the family as an expandable directory — click a name to open their profile in the
             tree.
@@ -315,8 +315,8 @@ export function PeopleTreeDirectory({
         )}
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[220px] flex-1">
+      <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative w-full sm:min-w-[220px] sm:flex-1">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
