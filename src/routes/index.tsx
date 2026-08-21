@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 
 import { AppShell } from "@/components/AppShell";
+import { FamilyTreeListView } from "@/components/FamilyTreeListView";
 import { PersonPanel } from "@/components/PersonPanel";
 import { FamilyTreeCanvas } from "@/components/FamilyTreeCanvas";
 import { TreeBreadcrumbs } from "@/components/TreeBreadcrumbs";
@@ -18,17 +19,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { useFamilyGraph } from "@/hooks/useFamily";
-import { ancestryPath, pathWithinRoot } from "@/lib/family";
+import { ancestryPath, canonicalRootId, collectSubtreeIds, listBranches, maxGeneration, pathWithinRoot } from "@/lib/family";
 import { ancestorsToExpand, computeVisibility } from "@/lib/tree-filters";
 import { defaultExpanded, loadTreeState, saveTreeState } from "@/lib/tree-state";
 
 const searchSchema = z.object({
   person: z.string().optional(),
   root: z.string().optional(),
+  view: z.enum(["canvas", "list"]).optional(),
 });
 
-const EXPAND_ALL_THRESHOLD = 200;
+const EXPAND_ALL_THRESHOLD = 150;
 
 export const Route = createFileRoute("/")({
   validateSearch: searchSchema,
@@ -51,29 +54,24 @@ export const Route = createFileRoute("/")({
 });
 
 function TreePage() {
-  const { person: personParam, root: rootParam } = Route.useSearch();
+  const { person: personParam, root: rootParam, view: viewParam } = Route.useSearch();
   const navigate = useNavigate({ from: "/" });
-  const { data: graph, isLoading, error } = useFamilyGraph();
+  const { data: graph, isLoading, error, refetch } = useFamilyGraph();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<string | null>(null);
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [gen, setGen] = useState<number | null>(null);
+  const [listQuery, setListQuery] = useState("");
   const [liveMessage, setLiveMessage] = useState("");
   const [expandConfirmOpen, setExpandConfirmOpen] = useState(false);
   const [pendingExpandCount, setPendingExpandCount] = useState(0);
+  const view = viewParam ?? "canvas";
   const hydratedRoot = useRef<string | null>(null);
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(query), 200);
-    return () => clearTimeout(t);
-  }, [query]);
 
   const rootId = useMemo(() => {
     if (!graph) return null;
     if (rootParam && graph.byId.has(rootParam)) return rootParam;
-    return graph.roots[0] ?? null;
+    return canonicalRootId(graph);
   }, [graph, rootParam]);
 
   // Single init: URL person wins over localStorage, else restore saved or default.
@@ -105,31 +103,26 @@ function TreePage() {
     hydratedRoot.current = null;
   }, [rootParam]);
 
-  const branches = useMemo(() => {
-    if (!graph) return [];
-    const ids = new Set<string>();
-    for (const b of graph.branchOf.values()) if (b) ids.add(b);
-    return [...ids]
-      .map((id) => ({ id, name: graph.byId.get(id)?.display_name ?? "Unknown" }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [graph]);
+  const branches = useMemo(() => (graph ? listBranches(graph) : []), [graph]);
 
-  const maxGen = useMemo(() => {
-    if (!graph?.people.length) return 0;
-    return Math.max(...graph.people.map((p) => (graph.depthOf.get(p.id) ?? 0) + 1));
-  }, [graph]);
+  const maxGen = useMemo(() => (graph ? maxGeneration(graph) : 0), [graph]);
+
+  const rootLabel = useMemo(() => {
+    if (!graph || !rootId) return "Unknown";
+    return graph.byId.get(rootId)?.display_name ?? "Unknown";
+  }, [graph, rootId]);
 
   const filterVisibility = useMemo(
     () =>
       graph
-        ? computeVisibility(graph, { query: debouncedQuery, branchId: "", gen })
+        ? computeVisibility(graph, { query: view === "list" ? listQuery : "", branchId: "", gen })
         : {
             active: false,
             visible: new Set<string>(),
             selfMatch: new Set<string>(),
             matchCount: 0,
           },
-    [graph, debouncedQuery, gen],
+    [graph, gen, listQuery, view],
   );
 
   const matchKey = useMemo(
@@ -148,14 +141,25 @@ function TreePage() {
     saveTreeState(rootId, expanded, selected, graph);
   }, [graph, rootId, expanded, selected]);
 
-  const toggle = useCallback((id: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
+  const toggle = useCallback(
+    (id: string) => {
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        const wasExpanded = next.has(id);
+        if (wasExpanded) next.delete(id);
+        else next.add(id);
+        if (graph) {
+          const name = graph.byId.get(id)?.display_name ?? "person";
+          const childCount = graph.childrenOf.get(id)?.length ?? 0;
+          setLiveMessage(
+            wasExpanded ? `Branch collapsed for ${name}` : `Showing ${childCount} children of ${name}`,
+          );
+        }
+        return next;
+      });
+    },
+    [graph],
+  );
 
   const select = useCallback(
     (id: string) => {
@@ -163,7 +167,7 @@ function TreePage() {
       setFocusedNodeId(id);
       if (graph) {
         const name = graph.byId.get(id)?.display_name ?? "person";
-        setLiveMessage(`Opened profile for ${name}`);
+        setLiveMessage(`${name}'s profile opened`);
       }
       navigate({ search: (prev) => ({ ...prev, person: id }), replace: true });
     },
@@ -185,42 +189,65 @@ function TreePage() {
     navigate({ search: (prev) => ({ ...prev, person: undefined }), replace: true });
   }, [navigate]);
 
-  const collectSubtreeIds = useCallback(() => {
+  const collectSubtree = useCallback(() => {
     if (!graph || !rootId) return new Set<string>();
-    const all = new Set<string>();
-    const stack = [rootId];
-    while (stack.length) {
-      const cur = stack.pop()!;
-      all.add(cur);
-      stack.push(...(graph.childrenOf.get(cur) ?? []));
-    }
-    return all;
+    return collectSubtreeIds(graph, rootId);
   }, [graph, rootId]);
 
+  const listVisible = useMemo(() => {
+    if (!graph || !rootId) return new Set<string>();
+    const subtree = collectSubtree();
+    if (!filterVisibility.active) return subtree;
+    return new Set([...filterVisibility.visible].filter((id) => subtree.has(id)));
+  }, [graph, rootId, filterVisibility.active, filterVisibility.visible, collectSubtree]);
+
+  const setView = useCallback(
+    (next: "canvas" | "list") => {
+      if (next === "canvas") setListQuery("");
+      navigate({
+        search: (prev) => ({ ...prev, view: next === "canvas" ? undefined : next }),
+        replace: true,
+      });
+    },
+    [navigate],
+  );
+
   const applyExpandAll = useCallback(() => {
-    setExpanded(collectSubtreeIds());
+    setExpanded(collectSubtree());
     setExpandConfirmOpen(false);
-  }, [collectSubtreeIds]);
+  }, [collectSubtree]);
 
   const requestExpandAll = useCallback(() => {
-    const all = collectSubtreeIds();
+    const all = collectSubtree();
     if (all.size > EXPAND_ALL_THRESHOLD) {
       setPendingExpandCount(all.size);
       setExpandConfirmOpen(true);
       return;
     }
     setExpanded(all);
-  }, [collectSubtreeIds]);
+  }, [collectSubtree]);
 
   const collapseToDefault = useCallback(() => {
     if (!graph || !rootId) return;
     setExpanded(defaultExpanded(graph, rootId));
   }, [graph, rootId]);
 
+  const goHome = useCallback(() => {
+    setSelected(null);
+    setFocusedNodeId(null);
+    if (graph && rootId) {
+      const canon = canonicalRootId(graph);
+      if (canon) setExpanded(defaultExpanded(graph, canon));
+    }
+    navigate({
+      search: (prev) => ({ ...prev, root: undefined, person: undefined }),
+      replace: true,
+    });
+  }, [navigate, graph, rootId]);
+
   const clearFilters = useCallback(() => {
-    setQuery("");
-    setDebouncedQuery("");
     setGen(null);
+    setListQuery("");
   }, []);
 
   const branchPickerValue = rootParam && branches.some((b) => b.id === rootParam) ? rootParam : "";
@@ -245,7 +272,7 @@ function TreePage() {
 
   return (
     <AppShell wide>
-      <div className="relative h-[calc(100dvh-4.25rem-4rem-env(safe-area-inset-bottom))] w-full md:h-[calc(100dvh-8.5rem)]">
+      <div className="tree-page flex flex-col overflow-hidden">
         <div className="sr-only" aria-live="polite" aria-atomic="true">
           {liveMessage}
         </div>
@@ -256,23 +283,31 @@ function TreePage() {
           </div>
         )}
         {error && (
-          <div className="flex h-full items-center justify-center text-destructive">
-            Could not load the family data.
+          <div className="flex h-full flex-col items-center justify-center gap-3 text-destructive">
+            <p>Could not load the family data.</p>
+            <Button variant="outline" onClick={() => refetch()}>
+              Try again
+            </Button>
           </div>
         )}
         {graph && rootId && breadcrumbFocusId && (
           <>
             <TreeToolbar
+              graph={graph}
+              rootLabel={rootLabel}
               branches={branches}
               branchPickerValue={branchPickerValue}
               onBranchChange={(branchId) =>
                 navigate({
-                  search: () => (branchId ? { root: branchId } : {}),
+                  search: (prev) =>
+                    branchId
+                      ? { ...prev, root: branchId, person: undefined }
+                      : { ...prev, root: undefined, person: undefined },
                   replace: true,
                 })
               }
-              query={query}
-              onQueryChange={setQuery}
+              onSelectPerson={focusInTree}
+              onHome={goHome}
               gen={gen}
               onGenChange={setGen}
               maxGen={maxGen}
@@ -281,39 +316,68 @@ function TreePage() {
               onClearFilters={clearFilters}
               onExpandAll={requestExpandAll}
               onCollapse={collapseToDefault}
+              view={view}
+              onViewChange={setView}
             />
 
-            {breadcrumbPath.length > 1 && (
-              <div className="pointer-events-none absolute inset-x-3 top-[7.5rem] z-20 sm:inset-x-auto sm:left-4 sm:right-4 sm:top-[8.5rem]">
-                <div className="pointer-events-none rounded-full border border-border bg-card/90 px-3 py-1.5 backdrop-blur sm:max-w-[min(100%,42rem)]">
-                  <TreeBreadcrumbs
-                    graph={graph}
-                    rootId={rootId}
-                    focusId={breadcrumbFocusId}
-                    onFocus={focusInTree}
-                  />
+            <div className="relative flex min-h-0 flex-1">
+              <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+                {breadcrumbPath.length > 1 && (
+                  <div className="shrink-0 px-3 pb-2 sm:px-4">
+                    <div className="rounded-full border border-border bg-card/90 px-3 py-1.5 backdrop-blur sm:max-w-[min(100%,42rem)]">
+                      <TreeBreadcrumbs
+                        graph={graph}
+                        rootId={rootId}
+                        focusId={breadcrumbFocusId}
+                        onFocus={focusInTree}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="relative min-h-0 flex-1">
+                  {view === "canvas" ? (
+                    <FamilyTreeCanvas
+                      graph={graph}
+                      rootId={rootId}
+                      expanded={expanded}
+                      selectedId={selected}
+                      focusedNodeId={focusedNodeId}
+                      filters={canvasFilters}
+                      onToggle={toggle}
+                      onSelect={select}
+                      onFocusNode={setFocusedNodeId}
+                      onClosePanel={selected ? closePanel : undefined}
+                    />
+                  ) : (
+                    <FamilyTreeListView
+                      graph={graph}
+                      rootId={rootId}
+                      expanded={expanded}
+                      onToggle={toggle}
+                      onSelect={select}
+                      selectedId={selected}
+                      focusedId={focusedNodeId ?? selected ?? rootId}
+                      onFocusId={setFocusedNodeId}
+                      listQuery={listQuery}
+                      onListQueryChange={setListQuery}
+                      visible={listVisible}
+                      selfMatch={filterVisibility.selfMatch}
+                      matchCount={filterVisibility.matchCount}
+                      filtersActive={filterVisibility.active}
+                      onClearFilters={clearFilters}
+                    />
+                  )}
                 </div>
               </div>
-            )}
 
-            <FamilyTreeCanvas
-              graph={graph}
-              rootId={rootId}
-              expanded={expanded}
-              selectedId={selected}
-              focusedNodeId={focusedNodeId}
-              filters={canvasFilters}
-              onToggle={toggle}
-              onSelect={select}
-              onFocusNode={setFocusedNodeId}
-              onClosePanel={selected ? closePanel : undefined}
-            />
-            <PersonPanel
-              graph={graph}
-              personId={selected}
-              onClose={closePanel}
-              onNavigatePerson={focusInTree}
-            />
+              <PersonPanel
+                graph={graph}
+                personId={selected}
+                onClose={closePanel}
+                onNavigatePerson={focusInTree}
+              />
+            </div>
 
             <AlertDialog open={expandConfirmOpen} onOpenChange={setExpandConfirmOpen}>
               <AlertDialogContent>

@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useFamilyGraph, useIsAdmin } from "@/hooks/useFamily";
 import { supabase } from "@/integrations/supabase/client";
 import type { Person } from "@/lib/family";
+import { lineageLabel } from "@/lib/family";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -164,7 +165,20 @@ function AdminPage() {
   };
 
   const remove = async (p: Person) => {
-    if (!window.confirm(`Remove ${p.display_name} from the record?`)) return;
+    if (!graph) return;
+    const childCount = graph.childrenOf.get(p.id)?.length ?? 0;
+    const parentCount = graph.parentsOf.get(p.id)?.length ?? 0;
+    const spouseCount = graph.spousesOf.get(p.id)?.length ?? 0;
+    const relCount = childCount + parentCount + spouseCount;
+    const parts: string[] = [];
+    if (childCount) parts.push(`${childCount} child${childCount === 1 ? "" : "ren"}`);
+    if (parentCount) parts.push(`${parentCount} parent${parentCount === 1 ? "" : "s"}`);
+    if (spouseCount) parts.push(`${spouseCount} spouse${spouseCount === 1 ? "" : "s"}`);
+    const relDetail =
+      relCount > 0
+        ? ` This will also delete ${relCount} recorded relationship${relCount === 1 ? "" : "s"} (${parts.join(", ")}) and cannot be undone.`
+        : "";
+    if (!window.confirm(`Remove ${p.display_name}?${relDetail}`)) return;
     const { error } = await supabase.from("people").delete().eq("id", p.id);
     if (error) toast.error(error.message);
     else {
@@ -191,6 +205,10 @@ function AdminPage() {
             <CardTitle>Admin sign in</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              You don&apos;t need an account to browse the family tree — sign in only if you&apos;re
+              maintaining records.
+            </p>
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -273,18 +291,19 @@ function AdminPage() {
           <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {(
               [
-                ["first_name", "First name"],
-                ["middle_name", "Middle name"],
-                ["last_name", "Last name"],
-                ["gender", "Gender"],
-                ["birth_date", "Birth date (YYYY-MM-DD)"],
-                ["death_date", "Death date (YYYY-MM-DD)"],
+                ["first_name", "First name", "text"],
+                ["middle_name", "Middle name", "text"],
+                ["last_name", "Last name", "text"],
+                ["gender", "Gender", "text"],
+                ["birth_date", "Birth date", "date"],
+                ["death_date", "Death date", "date"],
               ] as const
-            ).map(([key, label]) => (
+            ).map(([key, label, type]) => (
               <div key={key} className="space-y-1.5">
                 <Label htmlFor={key}>{label}</Label>
                 <Input
                   id={key}
+                  type={type}
                   value={draft[key]}
                   onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
                 />
@@ -302,7 +321,7 @@ function AdminPage() {
                   <option value="">No parent (new root)</option>
                   {graph?.people.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.display_name}
+                      {p.display_name} — {lineageLabel(graph, p.id)}
                     </option>
                   ))}
                 </select>

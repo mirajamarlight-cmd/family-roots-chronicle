@@ -13,11 +13,12 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
+import { PersonAvatarBadge } from "@/components/person-identity";
 import { cn } from "@/lib/utils";
 import type { FamilyGraph } from "@/lib/family";
-import { personPortraitUrl } from "@/lib/brand";
+import { branchColor } from "@/lib/colors";
 import type { FilterVisibility } from "@/lib/tree-filters";
 
 const NODE_WIDTH = 176;
@@ -26,18 +27,19 @@ const V_GAP = 132;
 
 export type TreeNodeData = {
   label: string;
-  photoUrl: string | null;
   childCount: number;
   hiddenChildren: boolean;
   expanded: boolean;
   selected: boolean;
   focused: boolean;
   depth: number;
+  branchKey: string;
   dimmed: boolean;
   matched: boolean;
 };
 
 const TreeHandlersContext = createContext<{
+  graph: FamilyGraph;
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
 } | null>(null);
@@ -45,12 +47,21 @@ const TreeHandlersContext = createContext<{
 function PersonNode({ id, data }: NodeProps) {
   const d = data as unknown as TreeNodeData;
   const handlers = useContext(TreeHandlersContext);
-  const genColor = ["var(--gen-1)", "var(--gen-2)", "var(--gen-3)", "var(--gen-4)", "var(--gen-5)"][
-    d.depth % 5
-  ];
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    requestAnimationFrame(() => setMounted(true));
+  }, []);
+
+  const avatarSize = d.depth === 0 ? "xl" : "md";
+
   return (
     <div
-      className={cn("relative transition-opacity", d.dimmed && "opacity-40")}
+      className={cn(
+        "relative transition-opacity duration-200",
+        mounted ? "scale-100 opacity-100" : "scale-95 opacity-0",
+        d.dimmed && "opacity-40",
+      )}
       style={{ width: NODE_WIDTH }}
     >
       <Handle type="target" position={Position.Top} className="!opacity-0" />
@@ -60,8 +71,9 @@ function PersonNode({ id, data }: NodeProps) {
         onClick={() => handlers?.onSelect(id)}
         aria-label={`Open profile for ${d.label}`}
         className={cn(
-          "w-full rounded-xl border bg-card px-3 py-2.5 text-left leaf-shadow transition-all",
-          d.photoUrl && d.depth === 0 && "pt-3",
+          "w-full rounded-xl border bg-card px-3 py-2.5 text-left leaf-shadow transition-all duration-200",
+          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          d.depth === 0 && "pt-3",
           d.selected
             ? "border-primary ring-2 ring-primary/35"
             : d.focused
@@ -70,29 +82,13 @@ function PersonNode({ id, data }: NodeProps) {
           d.matched && !d.selected && "ring-2 ring-destructive/25",
         )}
       >
-        {d.photoUrl ? (
-          <img
-            src={d.photoUrl}
-            alt={d.label}
-            className={cn(
-              "mx-auto rounded-full border border-border object-cover",
-              d.depth === 0 ? "mb-2 size-16" : "mb-1.5 size-10",
-            )}
-          />
-        ) : (
-          <span className="block h-1 w-8 rounded-full" style={{ backgroundColor: genColor }} />
-        )}
-        <span
-          className={cn(
-            "block truncate font-display text-base font-semibold leading-tight",
-            d.photoUrl && "text-center",
-          )}
-        >
+        <div className={cn("mb-2 flex justify-center", d.depth > 0 && "mb-1.5")}>
+          <PersonAvatarBadge graph={handlers!.graph} personId={id} size={avatarSize} />
+        </div>
+        <span className="block truncate text-center font-display text-base font-semibold leading-tight">
           {d.label}
         </span>
-        <span
-          className={cn("mt-0.5 block text-xs text-muted-foreground", d.photoUrl && "text-center")}
-        >
+        <span className="mt-0.5 block text-center text-xs text-muted-foreground">
           {d.childCount === 0 ? "No children recorded" : `${d.childCount} children`}
         </span>
       </button>
@@ -102,13 +98,15 @@ function PersonNode({ id, data }: NodeProps) {
             type="button"
             onClick={() => handlers?.onToggle(id)}
             aria-label={d.expanded ? "Collapse branch" : "Expand branch"}
-            className="flex size-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:text-primary"
+            className="flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
-            {d.expanded ? (
-              <ChevronDown className="size-3.5" />
-            ) : (
-              <ChevronRight className="size-3.5" />
-            )}
+            <span className="flex size-6 items-center justify-center rounded-full border border-border bg-card shadow-sm">
+              {d.expanded ? (
+                <ChevronDown className="size-3.5" />
+              ) : (
+                <ChevronRight className="size-3.5" />
+              )}
+            </span>
           </button>
           {d.hiddenChildren && (
             <span className="rounded-full bg-secondary px-1.5 py-px text-[10px] font-semibold text-muted-foreground">
@@ -150,8 +148,12 @@ function buildFlow(
   const nodes: Node[] = [];
   const edges: Edge[] = [];
   let cursor = 0;
+  const placed = new Set<string>();
+  const placedX = new Map<string, number>();
 
   const layout = (id: string, depth: number): number => {
+    if (placed.has(id)) return placedX.get(id)!;
+
     const children = expanded.has(id) ? (graph.childrenOf.get(id) ?? []) : [];
     let x: number;
     if (children.length === 0) {
@@ -171,18 +173,20 @@ function buildFlow(
       position: { x, y: depth * V_GAP },
       data: {
         label: person?.display_name ?? "Unknown",
-        photoUrl: personPortraitUrl(graph, id),
         childCount: allChildren.length,
         hiddenChildren: allChildren.length > 0 && !expanded.has(id),
         expanded: expanded.has(id),
         selected: selectedId === id,
         focused: focusedNodeId === id,
         depth,
+        branchKey: graph.branchOf.get(id) ?? person?.display_name ?? id,
         dimmed,
         matched: filters?.selfMatch.has(id) ?? false,
       } satisfies TreeNodeData as unknown as Record<string, unknown>,
       draggable: false,
     });
+    placed.add(id);
+    placedX.set(id, x);
     for (const c of children) {
       edges.push({
         id: `${id}-${c}`,
@@ -241,7 +245,7 @@ function Canvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const fitForRoot = useRef<string | null>(null);
 
-  const handlers = useMemo(() => ({ onToggle, onSelect }), [onToggle, onSelect]);
+  const handlers = useMemo(() => ({ graph, onToggle, onSelect }), [graph, onToggle, onSelect]);
 
   useEffect(() => {
     if (!nodes.length || fitForRoot.current === rootId) return;
@@ -351,6 +355,7 @@ function Canvas({
           maxZoom={1.6}
           nodesDraggable={false}
           nodesConnectable={false}
+          nodesFocusable={false}
           elementsSelectable={false}
           proOptions={{ hideAttribution: true }}
           className="bg-transparent"
@@ -360,22 +365,18 @@ function Canvas({
             showInteractive={false}
             className="!rounded-lg !border !border-border !bg-card"
           />
-          <MiniMap
-            className="!hidden sm:!block !rounded-lg !border !border-border !bg-card/90"
-            nodeColor={(node) => {
-              const depth = (node.data as TreeNodeData)?.depth ?? 0;
-              return [
-                "var(--gen-1)",
-                "var(--gen-2)",
-                "var(--gen-3)",
-                "var(--gen-4)",
-                "var(--gen-5)",
-              ][depth % 5]!;
-            }}
-            maskColor="oklch(0.4 0.03 70 / 0.08)"
-            pannable
-            zoomable
-          />
+          {nodes.length > 40 && (
+            <MiniMap
+              className="!rounded-lg !border !border-border !bg-card/90 !bottom-14 !left-3 !h-24 !w-32"
+              nodeColor={(node) => {
+                const branchKey = (node.data as TreeNodeData)?.branchKey ?? "";
+                return branchColor(branchKey);
+              }}
+              maskColor="oklch(0.4 0.03 70 / 0.08)"
+              pannable
+              zoomable
+            />
+          )}
         </ReactFlow>
       </TreeHandlersContext.Provider>
     </div>

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { FamilyGraph } from "@/lib/family";
-import { siblingsOf } from "@/lib/family";
+import { lineageLabel, siblingsOf } from "@/lib/family";
 import {
   addParentChild,
   addSibling,
@@ -57,7 +57,7 @@ function PersonSelect({
         <option value="">{placeholder}</option>
         {options.map((p) => (
           <option key={p.id} value={p.id}>
-            {p.display_name}
+            {p.display_name} — {lineageLabel(graph, p.id)}
           </option>
         ))}
       </select>

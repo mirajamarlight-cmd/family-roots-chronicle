@@ -158,3 +158,16 @@
 @utility leaf-shadow {
   box-shadow: var(--shadow-leaf);
 }
+
+@utility tree-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: calc(100dvh - 4.25rem - 4rem - env(safe-area-inset-bottom));
+  width: 100%;
+
+  @media (width >= 48rem) {
+    height: calc(100dvh - 8.5rem);
+  }
+}

@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { BarChart3, Search, Settings, TreeDeciduous, Users } from "lucide-react";
+import { BarChart3, Search, Settings, TreeDeciduous } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { BuiltByRaafat } from "@/components/brand/built-by-raafat";
@@ -8,7 +8,6 @@ import { SITE_LOGO_PATH } from "@/lib/brand";
 const NAV = [
   { to: "/", label: "Family Tree", short: "Tree", icon: TreeDeciduous },
   { to: "/search", label: "Search", short: "Search", icon: Search },
-  { to: "/people", label: "People", short: "People", icon: Users },
   { to: "/statistics", label: "Statistics", short: "Stats", icon: BarChart3 },
 ] as const;
 
@@ -25,7 +24,16 @@ export function AppShell({ children, wide }: { children: ReactNode; wide?: boole
             />
             <span className="font-display text-lg font-semibold tracking-tight">Family Tree</span>
           </Link>
-          <nav className="hidden items-center gap-1 md:flex">
+          <div className="flex items-center gap-1">
+            <Link
+              to="/admin"
+              activeProps={{ className: "bg-secondary text-secondary-foreground" }}
+              className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground md:hidden"
+            >
+              <Settings className="size-4" aria-hidden />
+              Admin
+            </Link>
+            <nav className="hidden items-center gap-1 md:flex">
             {NAV.map(({ to, label, icon: Icon }) => (
               <Link
                 key={to}
@@ -47,6 +55,7 @@ export function AppShell({ children, wide }: { children: ReactNode; wide?: boole
               Admin
             </Link>
           </nav>
+          </div>
         </div>
       </header>
 
@@ -76,7 +85,7 @@ export function AppShell({ children, wide }: { children: ReactNode; wide?: boole
       </footer>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-        <ul className="grid grid-cols-4">
+        <ul className="grid grid-cols-3">
           {NAV.map(({ to, short, icon: Icon }) => (
             <li key={to}>
               <Link

@@ -82,26 +82,27 @@ export function buildGraph(people: Person[], links: Link[], marriages: Marriage[
 
   const roots = people.filter((p) => !parentsOf.has(p.id)).map((p) => p.id);
 
+  const canonicalRoot =
+    roots.find((id) => byId.get(id)?.display_name === "Yonis") ?? roots[0] ?? null;
+
   const depthOf = new Map<string, number>();
   const branchOf = new Map<string, string | null>();
-  const queue: Array<{ id: string; depth: number; branch: string | null }> = roots.map((id) => ({
-    id,
-    depth: 0,
-    branch: null,
-  }));
-  const seen = new Set<string>();
-  while (queue.length) {
-    const { id, depth, branch } = queue.shift()!;
-    if (seen.has(id)) continue;
-    seen.add(id);
-    depthOf.set(id, depth);
-    branchOf.set(id, branch);
-    for (const child of childrenOf.get(id) ?? []) {
-      // branch = the third generation (children of the root's child), e.g. Ahmed's children
-      queue.push({ id: child, depth: depth + 1, branch: depth + 1 === 2 ? child : branch });
+  if (canonicalRoot) {
+    const queue: Array<{ id: string; depth: number; branch: string | null }> = [
+      { id: canonicalRoot, depth: 0, branch: null },
+    ];
+    while (queue.length) {
+      const { id, depth, branch } = queue.shift()!;
+      const prev = depthOf.get(id);
+      if (prev !== undefined && prev <= depth) continue;
+      depthOf.set(id, depth);
+      branchOf.set(id, branch);
+      for (const child of childrenOf.get(id) ?? []) {
+        queue.push({ id: child, depth: depth + 1, branch: depth + 1 === 2 ? child : branch });
+      }
     }
   }
-  // people not reachable from a root (shouldn't happen, but be safe)
+  // people not reachable from canonical root (shouldn't happen, but be safe)
   for (const p of people) if (!depthOf.has(p.id)) depthOf.set(p.id, 0);
 
   return {
@@ -206,4 +207,36 @@ export function searchPeople(graph: FamilyGraph, query: string, limit = 50): Per
       lineageLabel(graph, a.p.id).localeCompare(lineageLabel(graph, b.p.id)),
   );
   return scored.slice(0, limit).map((s) => s.p);
+}
+
+/** Default tree root: parentless person named Yonis, else first root. */
+export function canonicalRootId(graph: FamilyGraph): string | null {
+  const yonis = graph.roots.find((id) => graph.byId.get(id)?.display_name === "Yonis");
+  return yonis ?? graph.roots[0] ?? null;
+}
+
+/** Branch roots for pickers (third-generation ancestors). */
+export function listBranches(graph: FamilyGraph): { id: string; name: string }[] {
+  const ids = new Set<string>();
+  for (const b of graph.branchOf.values()) if (b) ids.add(b);
+  return [...ids]
+    .map((id) => ({ id, name: graph.byId.get(id)?.display_name ?? "Unknown" }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** All person ids reachable from a subtree root. */
+export function collectSubtreeIds(graph: FamilyGraph, rootId: string): Set<string> {
+  const all = new Set<string>();
+  const stack = [rootId];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    all.add(cur);
+    stack.push(...(graph.childrenOf.get(cur) ?? []));
+  }
+  return all;
+}
+
+export function maxGeneration(graph: FamilyGraph): number {
+  if (!graph.people.length) return 0;
+  return Math.max(...graph.people.map((p) => (graph.depthOf.get(p.id) ?? 0) + 1));
 }

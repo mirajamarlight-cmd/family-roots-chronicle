@@ -3,6 +3,7 @@ import { Loader2, Search as SearchIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFamilyGraph } from "@/hooks/useFamily";
 import { cn } from "@/lib/utils";
@@ -28,7 +29,7 @@ export const Route = createFileRoute("/search")({
 });
 
 function SearchPage() {
-  const { data: graph, isLoading } = useFamilyGraph();
+  const { data: graph, isLoading, error, refetch } = useFamilyGraph();
   const [query, setQuery] = useState("");
 
   const results = useMemo(() => (graph ? searchPeople(graph, query) : []), [graph, query]);
@@ -63,6 +64,15 @@ function SearchPage() {
         <p className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" /> Loading the family record…
         </p>
+      )}
+
+      {error && (
+        <div className="mt-6 flex flex-col items-start gap-3 text-destructive">
+          <p className="text-sm">Could not load the family data.</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Try again
+          </Button>
+        </div>
       )}
 
       {duplicateNames.size > 0 && (

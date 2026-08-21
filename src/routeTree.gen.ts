@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
-import { Route as PeopleRouteImport } from './routes/people'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as StatisticsRouteImport } from './routes/statistics'
 
@@ -23,11 +22,6 @@ const IndexRoute = IndexRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PeopleRoute = PeopleRouteImport.update({
-  id: '/people',
-  path: '/people',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SearchRoute = SearchRouteImport.update({
@@ -44,14 +38,12 @@ const StatisticsRoute = StatisticsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
-  '/people': typeof PeopleRoute
   '/search': typeof SearchRoute
   '/statistics': typeof StatisticsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
-  '/people': typeof PeopleRoute
   '/search': typeof SearchRoute
   '/statistics': typeof StatisticsRoute
 }
@@ -59,22 +51,20 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
-  '/people': typeof PeopleRoute
   '/search': typeof SearchRoute
   '/statistics': typeof StatisticsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/people' | '/search' | '/statistics'
+  fullPaths: '/' | '/admin' | '/search' | '/statistics'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/people' | '/search' | '/statistics'
-  id: '__root__' | '/' | '/admin' | '/people' | '/search' | '/statistics'
+  to: '/' | '/admin' | '/search' | '/statistics'
+  id: '__root__' | '/' | '/admin' | '/search' | '/statistics'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
-  PeopleRoute: typeof PeopleRoute
   SearchRoute: typeof SearchRoute
   StatisticsRoute: typeof StatisticsRoute
 }
@@ -93,13 +83,6 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/people': {
-      id: '/people'
-      path: '/people'
-      fullPath: '/people'
-      preLoaderRoute: typeof PeopleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/search': {
@@ -122,7 +105,6 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
-  PeopleRoute: PeopleRoute,
   SearchRoute: SearchRoute,
   StatisticsRoute: StatisticsRoute,
 }

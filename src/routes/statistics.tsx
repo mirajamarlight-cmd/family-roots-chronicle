@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
 
 import { AppShell } from "@/components/AppShell";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFamilyGraph } from "@/hooks/useFamily";
 import { descendantCount } from "@/lib/family";
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/statistics")({
 });
 
 function StatisticsPage() {
-  const { data: graph, isLoading } = useFamilyGraph();
+  const { data: graph, isLoading, error, refetch } = useFamilyGraph();
 
   const stats = useMemo(() => {
     if (!graph) return null;
@@ -64,6 +65,15 @@ function StatisticsPage() {
         <p className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" /> Loading…
         </p>
+      )}
+
+      {error && (
+        <div className="mt-6 flex flex-col items-start gap-3 text-destructive">
+          <p className="text-sm">Could not load the family data.</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Try again
+          </Button>
+        </div>
       )}
 
       {stats && (
