@@ -23,7 +23,7 @@ import type { FilterVisibility } from "@/lib/tree-filters";
 
 const NODE_WIDTH = 176;
 const H_GAP = 26;
-const V_GAP = 132;
+const V_GAP = 160;
 
 export type TreeNodeData = {
   label: string;
@@ -42,6 +42,7 @@ const TreeHandlersContext = createContext<{
   graph: FamilyGraph;
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
+  onToggleDeep?: ((id: string) => void) | undefined;
 } | null>(null);
 
 function PersonNode({ id, data }: NodeProps) {
@@ -58,13 +59,17 @@ function PersonNode({ id, data }: NodeProps) {
   return (
     <div
       className={cn(
-        "relative transition-opacity duration-200",
+        "pointer-events-auto relative transition-opacity duration-200",
         mounted ? "scale-100 opacity-100" : "scale-95 opacity-0",
         d.dimmed && "opacity-40",
       )}
       style={{ width: NODE_WIDTH }}
     >
-      <Handle type="target" position={Position.Top} className="!opacity-0" />
+      <Handle
+        type="target"
+        position={Position.Top}
+        style={{ opacity: 0, pointerEvents: "none", width: 1, height: 1, minWidth: 1, minHeight: 1 }}
+      />
       <button
         type="button"
         data-node-id={id}
@@ -93,29 +98,52 @@ function PersonNode({ id, data }: NodeProps) {
         </span>
       </button>
       {d.childCount > 0 && (
-        <div className="absolute -bottom-3 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-0.5">
+        <div className="absolute -bottom-3.5 left-1/2 z-20 -translate-x-1/2">
           <button
             type="button"
-            onClick={() => handlers?.onToggle(id)}
-            aria-label={d.expanded ? "Collapse branch" : "Expand branch"}
-            className="flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            onClick={(e) => {
+              e.stopPropagation();
+              if ((e.altKey || e.shiftKey) && handlers?.onToggleDeep) handlers.onToggleDeep(id);
+              else handlers?.onToggle(id);
+            }}
+            title={
+              d.expanded
+                ? "Collapse branch (alt-click to collapse all below)"
+                : `Show ${d.childCount} children (alt-click to expand all below)`
+            }
+            aria-label={
+              d.expanded
+                ? `Collapse branch of ${d.label}`
+                : `Expand ${d.childCount} children of ${d.label}`
+            }
+            aria-expanded={d.expanded}
+            className={cn(
+              "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold shadow-sm transition-colors",
+              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              d.expanded
+                ? "border-border bg-card text-muted-foreground hover:text-foreground"
+                : "border-primary/40 bg-primary text-primary-foreground hover:bg-primary/90",
+            )}
           >
-            <span className="flex size-6 items-center justify-center rounded-full border border-border bg-card shadow-sm">
-              {d.expanded ? (
-                <ChevronDown className="size-3.5" />
-              ) : (
-                <ChevronRight className="size-3.5" />
-              )}
-            </span>
+            {d.expanded ? (
+              <>
+                <ChevronDown className="size-3.5" aria-hidden />
+                Hide
+              </>
+            ) : (
+              <>
+                <ChevronRight className="size-3.5" aria-hidden />
+                {d.childCount}
+              </>
+            )}
           </button>
-          {d.hiddenChildren && (
-            <span className="rounded-full bg-secondary px-1.5 py-px text-[10px] font-semibold text-muted-foreground">
-              +{d.childCount}
-            </span>
-          )}
         </div>
       )}
-      <Handle type="source" position={Position.Bottom} className="!opacity-0" />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        style={{ opacity: 0, pointerEvents: "none", width: 1, height: 1, minWidth: 1, minHeight: 1 }}
+      />
     </div>
   );
 }
@@ -130,11 +158,12 @@ type Props = {
   expanded: Set<string>;
   selectedId: string | null;
   focusedNodeId: string | null;
-  filters?: CanvasFilters;
+  filters?: CanvasFilters | undefined;
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
   onFocusNode: (id: string | null) => void;
-  onClosePanel?: () => void;
+  onClosePanel?: (() => void) | undefined;
+  onToggleDeep?: ((id: string) => void) | undefined;
 };
 
 function buildFlow(
@@ -219,9 +248,9 @@ function buildNavMaps(nodes: Node[], edges: Edge[]) {
       return (na?.position.x ?? 0) - (nb?.position.x ?? 0);
     });
   }
-  const orderedIds = [...nodes].sort(
-    (a, b) => a.position.y - b.position.y || a.position.x - b.position.x,
-  );
+  const orderedIds = [...nodes]
+    .sort((a, b) => a.position.y - b.position.y || a.position.x - b.position.x)
+    .map((n) => n.id);
   return { parentOf, childrenOf, orderedIds };
 }
 
@@ -236,6 +265,7 @@ function Canvas({
   onSelect,
   onFocusNode,
   onClosePanel,
+  onToggleDeep,
 }: Props) {
   const { nodes, edges } = useMemo(
     () => buildFlow(graph, rootId, expanded, selectedId, focusedNodeId, filters),
@@ -245,7 +275,10 @@ function Canvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const fitForRoot = useRef<string | null>(null);
 
-  const handlers = useMemo(() => ({ graph, onToggle, onSelect }), [graph, onToggle, onSelect]);
+  const handlers = useMemo(
+    () => ({ graph, onToggle, onSelect, onToggleDeep }),
+    [graph, onToggle, onSelect, onToggleDeep],
+  );
 
   useEffect(() => {
     if (!nodes.length || fitForRoot.current === rootId) return;
@@ -258,6 +291,24 @@ function Canvas({
   useEffect(() => {
     fitForRoot.current = null;
   }, [rootId]);
+
+  // Keep the toggled branch in view when a node is expanded or collapsed.
+  const prevExpanded = useRef<Set<string>>(expanded);
+  useEffect(() => {
+    const prev = prevExpanded.current;
+    prevExpanded.current = expanded;
+    if (prev === expanded) return;
+    let changedId: string | null = null;
+    for (const id of expanded) if (!prev.has(id)) changedId = id;
+    if (!changedId) for (const id of prev) if (!expanded.has(id)) changedId = id;
+    if (!changedId) return;
+    const target = changedId;
+    const ids = [target, ...(graph.childrenOf.get(target) ?? [])].map((id) => ({ id }));
+    const timer = setTimeout(() => {
+      void flow.fitView({ nodes: ids, padding: 0.25, minZoom: 0.55, maxZoom: 0.95, duration: 400 });
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [expanded, flow, graph]);
 
   useEffect(() => {
     if (!selectedId) return;

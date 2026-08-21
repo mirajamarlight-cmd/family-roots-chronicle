@@ -222,14 +222,14 @@ export function AccessibleFamilyTree({
   onToggle: (id: string) => void;
   visible: Set<string>;
   selfMatch: Set<string>;
-  selectedId?: string | null;
-  focusedId?: string | null;
-  query?: string;
+  selectedId?: string | null | undefined;
+  focusedId?: string | null | undefined;
+  query?: string | undefined;
   onSelect: (id: string) => void;
-  onFocusId?: (id: string) => void;
-  showMeta?: boolean;
-  className?: string;
-  ariaLabel?: string;
+  onFocusId?: ((id: string) => void) | undefined;
+  showMeta?: boolean | undefined;
+  className?: string | undefined;
+  ariaLabel?: string | undefined;
 }) {
   const itemRefs = useRef(new Map<string, HTMLLIElement>());
   const rootName = graph.byId.get(rootId)?.display_name ?? "Unknown";
