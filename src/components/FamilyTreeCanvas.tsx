@@ -59,7 +59,7 @@ function PersonNode({ id, data }: NodeProps) {
   return (
     <div
       className={cn(
-        "relative transition-opacity duration-200",
+        "pointer-events-auto relative transition-opacity duration-200",
         mounted ? "scale-100 opacity-100" : "scale-95 opacity-0",
         d.dimmed && "opacity-40",
       )}
