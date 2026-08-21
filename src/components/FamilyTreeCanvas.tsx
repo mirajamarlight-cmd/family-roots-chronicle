@@ -65,7 +65,7 @@ function PersonNode({ id, data }: NodeProps) {
       )}
       style={{ width: NODE_WIDTH }}
     >
-      <Handle type="target" position={Position.Top} className="!opacity-0" />
+      <Handle type="target" position={Position.Top} className="!pointer-events-none !opacity-0" />
       <button
         type="button"
         data-node-id={id}
@@ -94,7 +94,7 @@ function PersonNode({ id, data }: NodeProps) {
         </span>
       </button>
       {d.childCount > 0 && (
-        <div className="absolute -bottom-3.5 left-1/2 z-10 -translate-x-1/2">
+        <div className="absolute -bottom-3.5 left-1/2 z-20 -translate-x-1/2">
           <button
             type="button"
             onClick={(e) => {
@@ -135,7 +135,7 @@ function PersonNode({ id, data }: NodeProps) {
           </button>
         </div>
       )}
-      <Handle type="source" position={Position.Bottom} className="!opacity-0" />
+      <Handle type="source" position={Position.Bottom} className="!pointer-events-none !opacity-0" />
     </div>
   );
 }
