@@ -130,11 +130,12 @@ type Props = {
   expanded: Set<string>;
   selectedId: string | null;
   focusedNodeId: string | null;
-  filters?: CanvasFilters;
+  filters?: CanvasFilters | undefined;
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
   onFocusNode: (id: string | null) => void;
-  onClosePanel?: () => void;
+  onClosePanel?: (() => void) | undefined;
+  onToggleDeep?: ((id: string) => void) | undefined;
 };
 
 function buildFlow(
@@ -219,9 +220,9 @@ function buildNavMaps(nodes: Node[], edges: Edge[]) {
       return (na?.position.x ?? 0) - (nb?.position.x ?? 0);
     });
   }
-  const orderedIds = [...nodes].sort(
-    (a, b) => a.position.y - b.position.y || a.position.x - b.position.x,
-  );
+  const orderedIds = [...nodes]
+    .sort((a, b) => a.position.y - b.position.y || a.position.x - b.position.x)
+    .map((n) => n.id);
   return { parentOf, childrenOf, orderedIds };
 }
 
