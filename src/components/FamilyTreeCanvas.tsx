@@ -303,15 +303,12 @@ function Canvas({
     if (!changedId) for (const id of prev) if (!expanded.has(id)) changedId = id;
     if (!changedId) return;
     const target = changedId;
-    requestAnimationFrame(() => {
-      const node = flow.getNode(target);
-      if (!node) return;
-      flow.setCenter(node.position.x + NODE_WIDTH / 2, node.position.y + V_GAP / 2, {
-        zoom: Math.min(flow.getZoom(), 0.85),
-        duration: 350,
-      });
-    });
-  }, [expanded, flow]);
+    const ids = [target, ...(graph.childrenOf.get(target) ?? [])].map((id) => ({ id }));
+    const timer = setTimeout(() => {
+      void flow.fitView({ nodes: ids, padding: 0.3, minZoom: 0.35, maxZoom: 0.95, duration: 400 });
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [expanded, flow, graph]);
 
   useEffect(() => {
     if (!selectedId) return;
