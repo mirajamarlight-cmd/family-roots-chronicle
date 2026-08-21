@@ -292,6 +292,27 @@ function Canvas({
     fitForRoot.current = null;
   }, [rootId]);
 
+  // Keep the toggled branch in view when a node is expanded or collapsed.
+  const prevExpanded = useRef<Set<string>>(expanded);
+  useEffect(() => {
+    const prev = prevExpanded.current;
+    prevExpanded.current = expanded;
+    if (prev === expanded) return;
+    let changedId: string | null = null;
+    for (const id of expanded) if (!prev.has(id)) changedId = id;
+    if (!changedId) for (const id of prev) if (!expanded.has(id)) changedId = id;
+    if (!changedId) return;
+    const target = changedId;
+    requestAnimationFrame(() => {
+      const node = flow.getNode(target);
+      if (!node) return;
+      flow.setCenter(node.position.x + NODE_WIDTH / 2, node.position.y + V_GAP / 2, {
+        zoom: Math.min(flow.getZoom(), 0.85),
+        duration: 350,
+      });
+    });
+  }, [expanded, flow]);
+
   useEffect(() => {
     if (!selectedId) return;
     const node = flow.getNode(selectedId);
