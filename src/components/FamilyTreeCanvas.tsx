@@ -23,7 +23,7 @@ import type { FilterVisibility } from "@/lib/tree-filters";
 
 const NODE_WIDTH = 176;
 const H_GAP = 26;
-const V_GAP = 132;
+const V_GAP = 160;
 
 export type TreeNodeData = {
   label: string;

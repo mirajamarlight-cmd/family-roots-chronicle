@@ -8,7 +8,7 @@ export type PersistedTreeState = {
 };
 
 export function defaultExpanded(graph: FamilyGraph, rootId: string): Set<string> {
-  return new Set([rootId, ...(graph.childrenOf.get(rootId) ?? [])]);
+  return new Set([rootId]);
 }
 
 function storageKey(rootId: string) {
