@@ -161,6 +161,28 @@ function TreePage() {
     [graph],
   );
 
+  const toggleDeep = useCallback(
+    (id: string) => {
+      if (!graph) return;
+      const subtree = collectSubtreeIds(graph, id);
+      const name = graph.byId.get(id)?.display_name ?? "person";
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        if (prev.has(id)) {
+          for (const sid of subtree) next.delete(sid);
+          setLiveMessage(`Collapsed the whole branch of ${name}`);
+        } else {
+          for (const sid of subtree) {
+            if ((graph.childrenOf.get(sid)?.length ?? 0) > 0) next.add(sid);
+          }
+          setLiveMessage(`Expanded the whole branch of ${name}`);
+        }
+        return next;
+      });
+    },
+    [graph],
+  );
+
   const select = useCallback(
     (id: string) => {
       setSelected(id);
@@ -347,6 +369,7 @@ function TreePage() {
                       onToggle={toggle}
                       onSelect={select}
                       onFocusNode={setFocusedNodeId}
+                      onToggleDeep={toggleDeep}
                       onClosePanel={selected ? closePanel : undefined}
                     />
                   ) : (
