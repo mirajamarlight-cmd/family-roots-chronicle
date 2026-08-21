@@ -65,7 +65,11 @@ function PersonNode({ id, data }: NodeProps) {
       )}
       style={{ width: NODE_WIDTH }}
     >
-      <Handle type="target" position={Position.Top} className="!pointer-events-none !opacity-0" />
+      <Handle
+        type="target"
+        position={Position.Top}
+        style={{ opacity: 0, pointerEvents: "none", width: 1, height: 1, minWidth: 1, minHeight: 1 }}
+      />
       <button
         type="button"
         data-node-id={id}
@@ -135,7 +139,11 @@ function PersonNode({ id, data }: NodeProps) {
           </button>
         </div>
       )}
-      <Handle type="source" position={Position.Bottom} className="!pointer-events-none !opacity-0" />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        style={{ opacity: 0, pointerEvents: "none", width: 1, height: 1, minWidth: 1, minHeight: 1 }}
+      />
     </div>
   );
 }
