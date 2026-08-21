@@ -42,6 +42,7 @@ const TreeHandlersContext = createContext<{
   graph: FamilyGraph;
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
+  onToggleDeep?: ((id: string) => void) | undefined;
 } | null>(null);
 
 function PersonNode({ id, data }: NodeProps) {
@@ -93,26 +94,45 @@ function PersonNode({ id, data }: NodeProps) {
         </span>
       </button>
       {d.childCount > 0 && (
-        <div className="absolute -bottom-3 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-0.5">
+        <div className="absolute -bottom-3.5 left-1/2 z-10 -translate-x-1/2">
           <button
             type="button"
-            onClick={() => handlers?.onToggle(id)}
-            aria-label={d.expanded ? "Collapse branch" : "Expand branch"}
-            className="flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            onClick={(e) => {
+              e.stopPropagation();
+              if ((e.altKey || e.shiftKey) && handlers?.onToggleDeep) handlers.onToggleDeep(id);
+              else handlers?.onToggle(id);
+            }}
+            title={
+              d.expanded
+                ? "Collapse branch (alt-click to collapse all below)"
+                : `Show ${d.childCount} children (alt-click to expand all below)`
+            }
+            aria-label={
+              d.expanded
+                ? `Collapse branch of ${d.label}`
+                : `Expand ${d.childCount} children of ${d.label}`
+            }
+            aria-expanded={d.expanded}
+            className={cn(
+              "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold shadow-sm transition-colors",
+              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              d.expanded
+                ? "border-border bg-card text-muted-foreground hover:text-foreground"
+                : "border-primary/40 bg-primary text-primary-foreground hover:bg-primary/90",
+            )}
           >
-            <span className="flex size-6 items-center justify-center rounded-full border border-border bg-card shadow-sm">
-              {d.expanded ? (
-                <ChevronDown className="size-3.5" />
-              ) : (
-                <ChevronRight className="size-3.5" />
-              )}
-            </span>
+            {d.expanded ? (
+              <>
+                <ChevronDown className="size-3.5" aria-hidden />
+                Hide
+              </>
+            ) : (
+              <>
+                <ChevronRight className="size-3.5" aria-hidden />
+                {d.childCount}
+              </>
+            )}
           </button>
-          {d.hiddenChildren && (
-            <span className="rounded-full bg-secondary px-1.5 py-px text-[10px] font-semibold text-muted-foreground">
-              +{d.childCount}
-            </span>
-          )}
         </div>
       )}
       <Handle type="source" position={Position.Bottom} className="!opacity-0" />
@@ -237,6 +257,7 @@ function Canvas({
   onSelect,
   onFocusNode,
   onClosePanel,
+  onToggleDeep,
 }: Props) {
   const { nodes, edges } = useMemo(
     () => buildFlow(graph, rootId, expanded, selectedId, focusedNodeId, filters),
@@ -246,7 +267,10 @@ function Canvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const fitForRoot = useRef<string | null>(null);
 
-  const handlers = useMemo(() => ({ graph, onToggle, onSelect }), [graph, onToggle, onSelect]);
+  const handlers = useMemo(
+    () => ({ graph, onToggle, onSelect, onToggleDeep }),
+    [graph, onToggle, onSelect, onToggleDeep],
+  );
 
   useEffect(() => {
     if (!nodes.length || fitForRoot.current === rootId) return;
