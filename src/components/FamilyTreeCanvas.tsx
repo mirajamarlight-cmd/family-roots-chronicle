@@ -305,7 +305,7 @@ function Canvas({
     const target = changedId;
     const ids = [target, ...(graph.childrenOf.get(target) ?? [])].map((id) => ({ id }));
     const timer = setTimeout(() => {
-      void flow.fitView({ nodes: ids, padding: 0.3, minZoom: 0.35, maxZoom: 0.95, duration: 400 });
+      void flow.fitView({ nodes: ids, padding: 0.25, minZoom: 0.55, maxZoom: 0.95, duration: 400 });
     }, 80);
     return () => clearTimeout(timer);
   }, [expanded, flow, graph]);
