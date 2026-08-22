@@ -351,6 +351,24 @@ function Canvas({
     };
   }, [expanded, flow, graph]);
 
+  // Restore keyboard focus to the toggled node's button after re-layout,
+  // and again once the fit-view animation finishes.
+  useEffect(() => {
+    const id = restoreFocusRef.current;
+    if (!id) return;
+    const frame = requestAnimationFrame(() => focusToggle(id));
+    const after = setTimeout(() => {
+      const active = document.activeElement as HTMLElement | null;
+      if (!active || !active.getAttribute?.("data-toggle-id")) focusToggle(id);
+      restoreFocusRef.current = null;
+    }, 620);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(after);
+    };
+  }, [nodes, focusToggle]);
+
+
   useEffect(() => {
     if (!selectedId) return;
     const node = flow.getNode(selectedId);
