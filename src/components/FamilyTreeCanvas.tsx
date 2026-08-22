@@ -101,6 +101,7 @@ function PersonNode({ id, data }: NodeProps) {
         <div className="absolute -bottom-3.5 left-1/2 z-20 -translate-x-1/2">
           <button
             type="button"
+            data-toggle-id={id}
             onClick={(e) => {
               e.stopPropagation();
               if ((e.altKey || e.shiftKey) && handlers?.onToggleDeep) handlers.onToggleDeep(id);
