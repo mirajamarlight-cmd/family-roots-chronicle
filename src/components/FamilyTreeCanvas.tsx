@@ -101,6 +101,7 @@ function PersonNode({ id, data }: NodeProps) {
         <div className="absolute -bottom-3.5 left-1/2 z-20 -translate-x-1/2">
           <button
             type="button"
+            data-toggle-id={id}
             onClick={(e) => {
               e.stopPropagation();
               if ((e.altKey || e.shiftKey) && handlers?.onToggleDeep) handlers.onToggleDeep(id);
@@ -275,9 +276,43 @@ function Canvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const fitForRoot = useRef<string | null>(null);
 
+  // Remember which node was toggled so keyboard focus returns to its
+  // expand/collapse button once the layout animation settles.
+  const restoreFocusRef = useRef<string | null>(null);
+
+  const focusToggle = useCallback((id: string) => {
+    const escaped = typeof CSS !== "undefined" && CSS.escape ? CSS.escape(id) : id;
+    const el = containerRef.current?.querySelector<HTMLElement>(`[data-toggle-id="${escaped}"]`);
+    el?.focus({ preventScroll: true });
+    return Boolean(el);
+  }, []);
+
+  const handleToggle = useCallback(
+    (id: string) => {
+      restoreFocusRef.current = id;
+      onFocusNode(id);
+      onToggle(id);
+    },
+    [onToggle, onFocusNode],
+  );
+
+  const handleToggleDeep = useCallback(
+    (id: string) => {
+      restoreFocusRef.current = id;
+      onFocusNode(id);
+      onToggleDeep?.(id);
+    },
+    [onToggleDeep, onFocusNode],
+  );
+
   const handlers = useMemo(
-    () => ({ graph, onToggle, onSelect, onToggleDeep }),
-    [graph, onToggle, onSelect, onToggleDeep],
+    () => ({
+      graph,
+      onToggle: handleToggle,
+      onSelect,
+      onToggleDeep: onToggleDeep ? handleToggleDeep : undefined,
+    }),
+    [graph, handleToggle, onSelect, onToggleDeep, handleToggleDeep],
   );
 
   useEffect(() => {
@@ -315,6 +350,26 @@ function Canvas({
       clearTimeout(done);
     };
   }, [expanded, flow, graph]);
+
+  // Restore keyboard focus to the toggled node's button after re-layout,
+  // and again once the fit-view animation finishes.
+  useEffect(() => {
+    const id = restoreFocusRef.current;
+    if (!id) return;
+    const frame = requestAnimationFrame(() => focusToggle(id));
+    const after = setTimeout(() => {
+      const active = document.activeElement as HTMLElement | null;
+      const movedAway =
+        active && active !== document.body && !containerRef.current?.contains(active);
+      if (!movedAway && active?.getAttribute?.("data-toggle-id") !== id) focusToggle(id);
+      restoreFocusRef.current = null;
+    }, 620);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(after);
+    };
+  }, [nodes, focusToggle]);
+
 
   useEffect(() => {
     if (!selectedId) return;
@@ -368,6 +423,9 @@ function Canvas({
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      // Let buttons inside nodes handle their own Enter/Space activation.
+      const target = e.target as HTMLElement | null;
+      if ((e.key === "Enter" || e.key === " ") && target?.closest("button")) return;
       if (e.key === "ArrowUp") {
         e.preventDefault();
         navigateFocus("up");
@@ -385,13 +443,13 @@ function Canvas({
         onSelect(focusedNodeId ?? selectedId!);
       } else if (e.key === " " && (focusedNodeId ?? selectedId)) {
         e.preventDefault();
-        onToggle(focusedNodeId ?? selectedId!);
+        handleToggle(focusedNodeId ?? selectedId!);
       } else if (e.key === "Escape") {
         e.preventDefault();
         onClosePanel?.();
       }
     },
-    [navigateFocus, focusedNodeId, selectedId, onSelect, onToggle, onClosePanel],
+    [navigateFocus, focusedNodeId, selectedId, onSelect, handleToggle, onClosePanel],
   );
 
   return (
