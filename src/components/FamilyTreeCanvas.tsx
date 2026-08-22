@@ -438,13 +438,13 @@ function Canvas({
         onSelect(focusedNodeId ?? selectedId!);
       } else if (e.key === " " && (focusedNodeId ?? selectedId)) {
         e.preventDefault();
-        onToggle(focusedNodeId ?? selectedId!);
+        handleToggle(focusedNodeId ?? selectedId!);
       } else if (e.key === "Escape") {
         e.preventDefault();
         onClosePanel?.();
       }
     },
-    [navigateFocus, focusedNodeId, selectedId, onSelect, onToggle, onClosePanel],
+    [navigateFocus, focusedNodeId, selectedId, onSelect, handleToggle, onClosePanel],
   );
 
   return (
