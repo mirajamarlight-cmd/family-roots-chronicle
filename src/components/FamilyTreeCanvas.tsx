@@ -397,7 +397,7 @@ function Canvas({
   return (
     <div
       ref={containerRef}
-      className="h-full w-full outline-none"
+      className="relative h-full w-full outline-none"
       tabIndex={0}
       role="tree"
       aria-label="Family tree"
