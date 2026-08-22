@@ -156,7 +156,10 @@ function TreeItem({
       </div>
 
       {hasKids && isExpanded && (
-        <ul role="group" className="ml-[17px] list-none border-l-[1.5px] border-border pl-[17px]">
+        <ul
+          role="group"
+          className="branch-open ml-[17px] list-none border-l-[1.5px] border-border pl-[17px]"
+        >
           {children.map((childId) => (
             <TreeItem
               key={childId}
