@@ -32,6 +32,7 @@ export type TreeNodeData = {
   expanded: boolean;
   selected: boolean;
   focused: boolean;
+  accent: boolean;
   depth: number;
   branchKey: string;
   dimmed: boolean;
@@ -83,8 +84,10 @@ function PersonNode({ id, data }: NodeProps) {
             ? "border-primary ring-2 ring-primary/35"
             : d.focused
               ? "border-primary/70 ring-2 ring-primary/20"
-              : "border-border hover:border-primary/45",
-          d.matched && !d.selected && "ring-2 ring-destructive/25",
+              : d.accent
+                ? "border-primary bg-primary/5 ring-2 ring-primary/45"
+                : "border-border hover:border-primary/45",
+          d.matched && !d.selected && !d.accent && "ring-2 ring-destructive/25",
         )}
       >
         <div className={cn("mb-2 flex justify-center", d.depth > 0 && "mb-1.5")}>
@@ -165,6 +168,9 @@ type Props = {
   onFocusNode: (id: string | null) => void;
   onClosePanel?: (() => void) | undefined;
   onToggleDeep?: ((id: string) => void) | undefined;
+  accentIds?: Set<string> | undefined;
+  accentEdgeIds?: Set<string> | undefined;
+  ariaLabel?: string | undefined;
 };
 
 function buildFlow(
@@ -174,6 +180,8 @@ function buildFlow(
   selectedId: string | null,
   focusedNodeId: string | null,
   filters: CanvasFilters | undefined,
+  accentIds: Set<string> | undefined,
+  accentEdgeIds: Set<string> | undefined,
 ): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
@@ -208,6 +216,7 @@ function buildFlow(
         expanded: expanded.has(id),
         selected: selectedId === id,
         focused: focusedNodeId === id,
+        accent: accentIds?.has(id) ?? false,
         depth,
         branchKey: graph.branchOf.get(id) ?? person?.display_name ?? id,
         dimmed,
@@ -218,12 +227,18 @@ function buildFlow(
     placed.add(id);
     placedX.set(id, x);
     for (const c of children) {
+      const edgeId = `${id}-${c}`;
+      const onPath = accentEdgeIds?.has(edgeId) ?? false;
       edges.push({
-        id: `${id}-${c}`,
+        id: edgeId,
         source: id,
         target: c,
         type: "smoothstep",
-        style: { stroke: "var(--border)", strokeWidth: 1.6 },
+        style: {
+          stroke: onPath ? "var(--primary)" : "var(--border)",
+          strokeWidth: onPath ? 2.8 : 1.6,
+        },
+        zIndex: onPath ? 2 : 0,
       });
     }
     return x;
@@ -267,10 +282,23 @@ function Canvas({
   onFocusNode,
   onClosePanel,
   onToggleDeep,
+  accentIds,
+  accentEdgeIds,
+  ariaLabel = "Family tree",
 }: Props) {
   const { nodes, edges } = useMemo(
-    () => buildFlow(graph, rootId, expanded, selectedId, focusedNodeId, filters),
-    [graph, rootId, expanded, selectedId, focusedNodeId, filters],
+    () =>
+      buildFlow(
+        graph,
+        rootId,
+        expanded,
+        selectedId,
+        focusedNodeId,
+        filters,
+        accentIds,
+        accentEdgeIds,
+      ),
+    [graph, rootId, expanded, selectedId, focusedNodeId, filters, accentIds, accentEdgeIds],
   );
   const flow = useReactFlow();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -458,7 +486,7 @@ function Canvas({
       className="relative h-full w-full outline-none"
       tabIndex={0}
       role="tree"
-      aria-label="Family tree"
+      aria-label={ariaLabel}
       onKeyDown={onKeyDown}
     >
       <div

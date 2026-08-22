@@ -11,8 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as RelationshipRouteImport } from './routes/relationship'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as StatisticsRouteImport } from './routes/statistics'
+import { Route as TreeRouteImport } from './routes/tree'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,6 +24,11 @@ const IndexRoute = IndexRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RelationshipRoute = RelationshipRouteImport.update({
+  id: '/relationship',
+  path: '/relationship',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SearchRoute = SearchRouteImport.update({
@@ -34,39 +41,60 @@ const StatisticsRoute = StatisticsRouteImport.update({
   path: '/statistics',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TreeRoute = TreeRouteImport.update({
+  id: '/tree',
+  path: '/tree',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/relationship': typeof RelationshipRoute
   '/search': typeof SearchRoute
   '/statistics': typeof StatisticsRoute
+  '/tree': typeof TreeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/relationship': typeof RelationshipRoute
   '/search': typeof SearchRoute
   '/statistics': typeof StatisticsRoute
+  '/tree': typeof TreeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/relationship': typeof RelationshipRoute
   '/search': typeof SearchRoute
   '/statistics': typeof StatisticsRoute
+  '/tree': typeof TreeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/search' | '/statistics'
+  fullPaths:
+    '/' | '/admin' | '/relationship' | '/search' | '/statistics' | '/tree'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/search' | '/statistics'
-  id: '__root__' | '/' | '/admin' | '/search' | '/statistics'
+  to: '/' | '/admin' | '/relationship' | '/search' | '/statistics' | '/tree'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/relationship'
+    | '/search'
+    | '/statistics'
+    | '/tree'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  RelationshipRoute: typeof RelationshipRoute
   SearchRoute: typeof SearchRoute
   StatisticsRoute: typeof StatisticsRoute
+  TreeRoute: typeof TreeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -85,6 +113,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/relationship': {
+      id: '/relationship'
+      path: '/relationship'
+      fullPath: '/relationship'
+      preLoaderRoute: typeof RelationshipRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/search': {
       id: '/search'
       path: '/search'
@@ -99,14 +134,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StatisticsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tree': {
+      id: '/tree'
+      path: '/tree'
+      fullPath: '/tree'
+      preLoaderRoute: typeof TreeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  RelationshipRoute: RelationshipRoute,
   SearchRoute: SearchRoute,
   StatisticsRoute: StatisticsRoute,
+  TreeRoute: TreeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

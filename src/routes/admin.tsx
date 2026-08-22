@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
+import { PageState } from "@/components/PageState";
 import { RelationshipManager } from "@/components/RelationshipManager";
 
 import { Button } from "@/components/ui/button";
@@ -16,17 +18,18 @@ import { useFamilyGraph, useIsAdmin } from "@/hooks/useFamily";
 import { supabase } from "@/integrations/supabase/client";
 import type { Person } from "@/lib/family";
 import { lineageLabel } from "@/lib/family";
+import { SITE_NAME } from "@/lib/brand";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Admin — Yonis & Ahmed Family Record" },
+      { title: `Admin — ${SITE_NAME}` },
       {
         name: "description",
         content:
-          "Private administration area for maintaining the documented Yonis and Ahmed family records.",
+          "Private administration area for maintaining the Feqi Yonis family tree.",
       },
-      { property: "og:title", content: "Admin — Yonis & Ahmed Family Record" },
+      { property: "og:title", content: `Admin — ${SITE_NAME}` },
       {
         property: "og:description",
         content: "Sign in to add, edit or remove family records.",
@@ -66,6 +69,7 @@ function AdminPage() {
 
   const [authEmail, setAuthEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [filter, setFilter] = useState("");
@@ -190,9 +194,7 @@ function AdminPage() {
   if (loading) {
     return (
       <AppShell>
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> Checking access…
-        </p>
+        <PageState variant="loading" message="Checking access…" />
       </AppShell>
     );
   }
@@ -200,9 +202,9 @@ function AdminPage() {
   if (!userId) {
     return (
       <AppShell>
-        <Card className="mx-auto max-w-sm">
+        <Card className="mx-auto max-w-sm leaf-shadow">
           <CardHeader>
-            <CardTitle>Admin sign in</CardTitle>
+            <CardTitle className="font-display">Admin sign in</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
@@ -220,12 +222,27 @@ function AdminPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="size-4" aria-hidden />
+                  ) : (
+                    <Eye className="size-4" aria-hidden />
+                  )}
+                </button>
+              </div>
             </div>
             <div className="flex flex-col gap-2 pt-1 sm:flex-row">
               <Button onClick={() => signIn("in")} disabled={busy} className="flex-1">
@@ -250,11 +267,7 @@ function AdminPage() {
     return (
       <AppShell>
         <div className="mx-auto max-w-md space-y-4 text-center">
-          <h1 className="font-display text-2xl font-semibold">No admin access</h1>
-          <p className="text-sm text-muted-foreground">
-            Signed in as {email}. If you are the family record keeper and no admin exists yet, you
-            can claim the role.
-          </p>
+          <PageHeader title="No admin access" description={`Signed in as ${email}. If you are the family record keeper and no admin exists yet, you can claim the role.`} />
           <div className="flex justify-center gap-2">
             <Button onClick={claimAdmin}>Claim admin role</Button>
             <Button variant="outline" onClick={() => supabase.auth.signOut()}>
@@ -268,25 +281,25 @@ function AdminPage() {
 
   return (
     <AppShell>
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">Admin</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Signed in as {email}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button className="flex-1 sm:flex-none" onClick={() => setDraft({ ...emptyDraft })}>
-            <Plus className="size-4" /> Add person
-          </Button>
-          <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => supabase.auth.signOut()}>
-            Sign out
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Admin"
+        description={`Signed in as ${email}`}
+        actions={
+          <>
+            <Button className="flex-1 sm:flex-none" onClick={() => setDraft({ ...emptyDraft })}>
+              <Plus className="size-4" /> Add person
+            </Button>
+            <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => supabase.auth.signOut()}>
+              Sign out
+            </Button>
+          </>
+        }
+      />
 
       {draft && (
-        <Card className="mt-6">
+        <Card className="mt-6 leaf-shadow">
           <CardHeader>
-            <CardTitle className="text-base">{draft.id ? "Edit person" : "New person"}</CardTitle>
+            <CardTitle className="font-display text-base">{draft.id ? "Edit person" : "New person"}</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {(
@@ -356,7 +369,7 @@ function AdminPage() {
         className="mt-6 w-full max-w-xs"
       />
 
-      <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-card/70">
+      <ul className="mt-4 divide-y divide-border rounded-2xl border border-border bg-card/80 leaf-shadow">
         {people.map((p) => (
           <li key={p.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
             <span className="text-sm">{p.display_name}</span>

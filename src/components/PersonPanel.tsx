@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router";
 import { GitBranch, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 
@@ -47,12 +46,14 @@ function PanelBody({
   person,
   onClose,
   onNavigatePerson,
+  onViewBranch,
   closeRef,
 }: {
   graph: FamilyGraph;
   person: Person;
   onClose: () => void;
   onNavigatePerson: (id: string) => void;
+  onViewBranch?: (branchId: string) => void;
   closeRef: React.RefObject<HTMLButtonElement | null>;
 }) {
   const parents = graph.parentsOf.get(person.id) ?? [];
@@ -94,11 +95,17 @@ function PanelBody({
       </div>
 
       {branchId && (
-        <Button asChild variant="outline" size="sm" className="w-full justify-center gap-2">
-          <Link to="/" search={{ root: branchId }}>
-            <GitBranch className="size-4" />
-            View this branch in tree
-          </Link>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full justify-center gap-2"
+          onClick={() => {
+            onViewBranch?.(branchId);
+            onClose();
+          }}
+        >
+          <GitBranch className="size-4" />
+          View this branch in tree
         </Button>
       )}
 
@@ -132,11 +139,13 @@ export function PersonPanel({
   personId,
   onClose,
   onNavigatePerson,
+  onViewBranch,
 }: {
   graph: FamilyGraph;
   personId: string | null;
   onClose: () => void;
   onNavigatePerson: (id: string) => void;
+  onViewBranch?: (branchId: string) => void;
 }) {
   const isMobile = useIsMobile();
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -190,6 +199,7 @@ export function PersonPanel({
             person={person}
             onClose={onClose}
             onNavigatePerson={onNavigatePerson}
+            onViewBranch={onViewBranch}
             closeRef={closeRef}
           />
         </aside>
@@ -212,6 +222,7 @@ export function PersonPanel({
         person={person}
         onClose={onClose}
         onNavigatePerson={onNavigatePerson}
+        onViewBranch={onViewBranch}
         closeRef={closeRef}
       />
     </aside>

@@ -1,23 +1,38 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
+import { GitBranch, Users } from "lucide-react";
 import { useMemo } from "react";
 
 import { AppShell } from "@/components/AppShell";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ContentCard } from "@/components/ContentCard";
+import { PageHeader } from "@/components/PageHeader";
+import { PageState } from "@/components/PageState";
+import { PersonAvatarBadge } from "@/components/person-identity";
 import { useFamilyGraph } from "@/hooks/useFamily";
 import { descendantCount } from "@/lib/family";
+import { SITE_NAME } from "@/lib/brand";
+
+const GEN_COLORS = [
+  "var(--gen-1)",
+  "var(--gen-2)",
+  "var(--gen-3)",
+  "var(--gen-4)",
+  "var(--gen-5)",
+] as const;
+
+function genColor(depth: number): string {
+  return GEN_COLORS[Math.min(depth, GEN_COLORS.length - 1)]!;
+}
 
 export const Route = createFileRoute("/statistics")({
   head: () => ({
     meta: [
-      { title: "Family Statistics — Yonis & Ahmed Family Record" },
+      { title: `Statistics — ${SITE_NAME}` },
       {
         name: "description",
         content:
-          "Generation counts, branch sizes and totals across the documented Yonis and Ahmed family record.",
+          "Generation counts, branch sizes and totals across the Feqi Yonis family tree.",
       },
-      { property: "og:title", content: "Family Statistics — Yonis & Ahmed Family Record" },
+      { property: "og:title", content: `Statistics — ${SITE_NAME}` },
       {
         property: "og:description",
         content: "See how the family is distributed across generations and branches.",
@@ -26,6 +41,20 @@ export const Route = createFileRoute("/statistics")({
   }),
   component: StatisticsPage,
 });
+
+function StatTile({ label, value, icon: Icon }: { label: string; value: number; icon: typeof Users }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-border bg-secondary/30 px-4 py-3">
+      <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <Icon className="size-4" aria-hidden />
+      </span>
+      <div>
+        <p className="text-2xl font-semibold tabular-nums leading-none">{value}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+      </div>
+    </div>
+  );
+}
 
 function StatisticsPage() {
   const { data: graph, isLoading, error, refetch } = useFamilyGraph();
@@ -56,89 +85,67 @@ function StatisticsPage() {
 
   return (
     <AppShell>
-      <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">Statistics</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Counts derived only from documented records.
-      </p>
+      <PageHeader
+        title="Statistics"
+        description="Counts derived only from documented records."
+      />
 
-      {isLoading && (
-        <p className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> Loading…
-        </p>
-      )}
-
-      {error && (
-        <div className="mt-6 flex flex-col items-start gap-3 text-destructive">
-          <p className="text-sm">Could not load the family data.</p>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            Try again
-          </Button>
-        </div>
-      )}
+      <div className="mt-6">
+        {isLoading && <PageState variant="loading" />}
+        {error && <PageState variant="error" onRetry={() => refetch()} />}
+      </div>
 
       {stats && (
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Overview</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1 text-sm">
-              <p>{stats.total} people recorded</p>
-              <p>{stats.relationships} parent–child links</p>
-              <p>{stats.generations.length} generations</p>
-            </CardContent>
-          </Card>
+        <div className="mt-6 space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <StatTile label="People recorded" value={stats.total} icon={Users} />
+            <StatTile label="Generations" value={stats.generations.length} icon={Users} />
+            <StatTile label="Parent–child links" value={stats.relationships} icon={GitBranch} />
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">People per generation</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
+          <ContentCard>
+            <h2 className="font-display text-base font-semibold">People per generation</h2>
+            <div className="mt-4 space-y-3">
               {stats.generations.map(([depth, count]) => (
                 <div key={depth} className="flex items-center gap-2 text-sm sm:gap-3">
                   <span className="w-20 shrink-0 text-xs text-muted-foreground sm:w-24 sm:text-sm">
                     Generation {depth + 1}
                   </span>
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
+                  <div className="stat-bar flex-1">
                     <div
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${(count / stats.total) * 100}%` }}
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${(count / stats.total) * 100}%`,
+                        backgroundColor: genColor(depth),
+                      }}
                     />
                   </div>
                   <span className="w-8 text-right tabular-nums">{count}</span>
                 </div>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </ContentCard>
 
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-base">Branches</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <ContentCard>
+            <h2 className="font-display text-base font-semibold">Branches</h2>
+            <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {stats.branches.map((b) => (
-                <div
-                  key={b.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
-                >
-                  <Link to="/" search={{ person: b.id }} className="hover:underline">
-                    {b.name}
+                <li key={b.id}>
+                  <Link
+                    to="/tree"
+                    search={{ person: b.id }}
+                    className="flex items-center gap-3 rounded-xl border border-border px-3 py-2.5 transition-colors hover:bg-secondary/50"
+                  >
+                    {graph && <PersonAvatarBadge graph={graph} personId={b.id} size="sm" />}
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{b.name}</span>
+                    <span className="shrink-0 tabular-nums text-xs text-muted-foreground">
+                      {b.size}
+                    </span>
                   </Link>
-                  <div className="flex items-center gap-2">
-                    <Link
-                      to="/"
-                      search={{ root: b.id }}
-                      className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-secondary/60"
-                    >
-                      View branch
-                    </Link>
-                    <span className="text-muted-foreground tabular-nums">{b.size}</span>
-                  </div>
-                </div>
+                </li>
               ))}
-            </CardContent>
-
-          </Card>
+            </ul>
+          </ContentCard>
         </div>
       )}
     </AppShell>

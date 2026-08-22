@@ -159,6 +159,13 @@
   box-shadow: var(--shadow-leaf);
 }
 
+@utility stat-bar {
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: 9999px;
+  background-color: var(--color-secondary);
+}
+
 @utility tree-page {
   position: relative;
   display: flex;

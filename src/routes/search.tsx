@@ -1,24 +1,27 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Loader2, Search as SearchIcon } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { Search as SearchIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
-import { Button } from "@/components/ui/button";
+import { ContentCard } from "@/components/ContentCard";
+import { PageHeader } from "@/components/PageHeader";
+import { PageState } from "@/components/PageState";
+import { PersonSearchResults, useDuplicateNames } from "@/components/PersonSearchResults";
 import { Input } from "@/components/ui/input";
 import { useFamilyGraph } from "@/hooks/useFamily";
-import { cn } from "@/lib/utils";
-import { lineageLabel, searchPeople } from "@/lib/family";
+import { searchPeople } from "@/lib/family";
+import { SITE_NAME } from "@/lib/brand";
 
 export const Route = createFileRoute("/search")({
   head: () => ({
     meta: [
-      { title: "Search Relatives — Yonis & Ahmed Family Record" },
+      { title: `Search — ${SITE_NAME}` },
       {
         name: "description",
         content:
-          "Search the Yonis and Ahmed family record by name and jump straight to a relative's place in the tree.",
+          "Search the Feqi Yonis family tree by name and jump straight to a relative's place in the tree.",
       },
-      { property: "og:title", content: "Search Relatives — Yonis & Ahmed Family Record" },
+      { property: "og:title", content: `Search — ${SITE_NAME}` },
       {
         property: "og:description",
         content: "Find any documented relative by name and open their branch of the family tree.",
@@ -33,21 +36,15 @@ function SearchPage() {
   const [query, setQuery] = useState("");
 
   const results = useMemo(() => (graph ? searchPeople(graph, query) : []), [graph, query]);
-
-  const duplicateNames = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const person of results) {
-      counts.set(person.display_name, (counts.get(person.display_name) ?? 0) + 1);
-    }
-    return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([name]) => name));
-  }, [results]);
+  const duplicateNames = useDuplicateNames(results);
+  const trimmed = query.trim();
 
   return (
     <AppShell>
-      <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">Search</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Search by any part of a name across the documented family record.
-      </p>
+      <PageHeader
+        title="Search"
+        description="Search by any part of a name across the Feqi Yonis family tree."
+      />
 
       <div className="relative mt-6 w-full max-w-lg">
         <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -55,79 +52,45 @@ function SearchPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="e.g. Ahmed, Hamdi, Humeyda"
-          className="pl-9"
+          aria-label="Search relatives by name"
+          className="rounded-full pl-9"
           autoFocus
         />
       </div>
 
-      {isLoading && (
-        <p className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> Loading the family record…
-        </p>
-      )}
+      <div className="mt-6" aria-live="polite" aria-atomic="true">
+        {isLoading && <PageState variant="loading" />}
+        {error && <PageState variant="error" onRetry={() => refetch()} />}
 
-      {error && (
-        <div className="mt-6 flex flex-col items-start gap-3 text-destructive">
-          <p className="text-sm">Could not load the family data.</p>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            Try again
-          </Button>
-        </div>
-      )}
+        {graph && !trimmed && !isLoading && (
+          <PageState
+            variant="empty"
+            message="Start typing a name to search the family tree."
+            hint="Try a first name, surname, or part of either."
+          />
+        )}
 
-      {duplicateNames.size > 0 && (
-        <p className="mt-4 rounded-lg border border-border bg-secondary/40 px-3 py-2 text-sm text-muted-foreground">
-          {results.length} relatives match, including {duplicateNames.size} shared name
-          {duplicateNames.size === 1 ? "" : "s"}. Use the full path below to choose the right
-          person.
-        </p>
-      )}
+        {graph && trimmed && results.length === 0 && !isLoading && (
+          <PageState
+            variant="empty"
+            message={`No relative matches “${trimmed}”.`}
+            hint="Check spelling or try a shorter part of the name."
+          />
+        )}
 
-      <ul className="mt-6 space-y-2">
-        {graph &&
-          results.map((p) => {
-            const path = lineageLabel(graph, p.id);
-            const parentId = graph.parentsOf.get(p.id)?.[0];
-            const parentName = parentId ? graph.byId.get(parentId)?.display_name : null;
-            const branchId = graph.branchOf.get(p.id);
-            const branchName = branchId ? graph.byId.get(branchId)?.display_name : null;
-            const isDuplicate = duplicateNames.has(p.display_name);
-
-            return (
-              <li key={p.id}>
-                <Link
-                  to="/"
-                  search={{ person: p.id }}
-                  className="block rounded-lg border border-border bg-card/70 px-4 py-3 transition-colors hover:bg-secondary/60"
-                >
-                  <span className="font-medium">{p.display_name}</span>
-                  <span
-                    className={cn(
-                      "mt-1 block text-sm leading-snug",
-                      isDuplicate ? "font-medium text-foreground/85" : "text-muted-foreground",
-                    )}
-                  >
-                    {path}
-                  </span>
-                  {isDuplicate && (parentName || branchName) && (
-                    <span className="mt-1 block text-xs text-muted-foreground">
-                      {[
-                        parentName && `Parent: ${parentName}`,
-                        branchName && `Branch: ${branchName}`,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-      </ul>
-
-      {graph && query.trim() && results.length === 0 && (
-        <p className="mt-6 text-sm text-muted-foreground">No relative matches that name.</p>
-      )}
+        {graph && trimmed && results.length > 0 && (
+          <ContentCard padding="sm" className="overflow-hidden p-0">
+            <PersonSearchResults
+              graph={graph}
+              results={results}
+              duplicateNames={duplicateNames}
+              mode="link"
+              showBranchLink
+              className="max-h-none py-0"
+            />
+          </ContentCard>
+        )}
+      </div>
     </AppShell>
   );
 }
