@@ -59,8 +59,8 @@ function PersonNode({ id, data }: NodeProps) {
   return (
     <div
       className={cn(
-        "pointer-events-auto relative transition-opacity duration-200",
-        mounted ? "scale-100 opacity-100" : "scale-95 opacity-0",
+        "pointer-events-auto relative transition-[opacity,transform] duration-300 ease-out",
+        mounted ? "translate-y-0 scale-100 opacity-100" : "-translate-y-1 scale-95 opacity-0",
         d.dimmed && "opacity-40",
       )}
       style={{ width: NODE_WIDTH }}
