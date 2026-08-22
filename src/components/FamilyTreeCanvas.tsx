@@ -276,9 +276,43 @@ function Canvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const fitForRoot = useRef<string | null>(null);
 
+  // Remember which node was toggled so keyboard focus returns to its
+  // expand/collapse button once the layout animation settles.
+  const restoreFocusRef = useRef<string | null>(null);
+
+  const focusToggle = useCallback((id: string) => {
+    const escaped = typeof CSS !== "undefined" && CSS.escape ? CSS.escape(id) : id;
+    const el = containerRef.current?.querySelector<HTMLElement>(`[data-toggle-id="${escaped}"]`);
+    el?.focus({ preventScroll: true });
+    return Boolean(el);
+  }, []);
+
+  const handleToggle = useCallback(
+    (id: string) => {
+      restoreFocusRef.current = id;
+      onFocusNode(id);
+      onToggle(id);
+    },
+    [onToggle, onFocusNode],
+  );
+
+  const handleToggleDeep = useCallback(
+    (id: string) => {
+      restoreFocusRef.current = id;
+      onFocusNode(id);
+      onToggleDeep?.(id);
+    },
+    [onToggleDeep, onFocusNode],
+  );
+
   const handlers = useMemo(
-    () => ({ graph, onToggle, onSelect, onToggleDeep }),
-    [graph, onToggle, onSelect, onToggleDeep],
+    () => ({
+      graph,
+      onToggle: handleToggle,
+      onSelect,
+      onToggleDeep: onToggleDeep ? handleToggleDeep : undefined,
+    }),
+    [graph, handleToggle, onSelect, onToggleDeep, handleToggleDeep],
   );
 
   useEffect(() => {
