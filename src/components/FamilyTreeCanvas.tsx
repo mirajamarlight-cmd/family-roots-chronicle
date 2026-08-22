@@ -59,8 +59,8 @@ function PersonNode({ id, data }: NodeProps) {
   return (
     <div
       className={cn(
-        "pointer-events-auto relative transition-opacity duration-200",
-        mounted ? "scale-100 opacity-100" : "scale-95 opacity-0",
+        "pointer-events-auto relative transition-[opacity,transform] duration-300 ease-out",
+        mounted ? "translate-y-0 scale-100 opacity-100" : "-translate-y-1 scale-95 opacity-0",
         d.dimmed && "opacity-40",
       )}
       style={{ width: NODE_WIDTH }}
@@ -293,6 +293,7 @@ function Canvas({
   }, [rootId]);
 
   // Keep the toggled branch in view when a node is expanded or collapsed.
+  const [settling, setSettling] = useState(false);
   const prevExpanded = useRef<Set<string>>(expanded);
   useEffect(() => {
     const prev = prevExpanded.current;
@@ -304,10 +305,15 @@ function Canvas({
     if (!changedId) return;
     const target = changedId;
     const ids = [target, ...(graph.childrenOf.get(target) ?? [])].map((id) => ({ id }));
+    setSettling(true);
     const timer = setTimeout(() => {
       void flow.fitView({ nodes: ids, padding: 0.25, minZoom: 0.55, maxZoom: 0.95, duration: 400 });
     }, 80);
-    return () => clearTimeout(timer);
+    const done = setTimeout(() => setSettling(false), 560);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(done);
+    };
   }, [expanded, flow, graph]);
 
   useEffect(() => {
@@ -391,12 +397,21 @@ function Canvas({
   return (
     <div
       ref={containerRef}
-      className="h-full w-full outline-none"
+      className="relative h-full w-full outline-none"
       tabIndex={0}
       role="tree"
       aria-label="Family tree"
       onKeyDown={onKeyDown}
     >
+      <div
+        aria-live="polite"
+        className={cn(
+          "pointer-events-none absolute left-1/2 top-3 z-30 -translate-x-1/2 rounded-full border border-border bg-card/95 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm transition-all duration-200",
+          settling ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0",
+        )}
+      >
+        Arranging branch…
+      </div>
       <TreeHandlersContext.Provider value={handlers}>
         <ReactFlow
           nodes={nodes}
