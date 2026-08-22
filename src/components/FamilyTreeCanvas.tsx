@@ -403,6 +403,15 @@ function Canvas({
       aria-label="Family tree"
       onKeyDown={onKeyDown}
     >
+      <div
+        aria-live="polite"
+        className={cn(
+          "pointer-events-none absolute left-1/2 top-3 z-30 -translate-x-1/2 rounded-full border border-border bg-card/95 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm transition-all duration-200",
+          settling ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0",
+        )}
+      >
+        Arranging branch…
+      </div>
       <TreeHandlersContext.Provider value={handlers}>
         <ReactFlow
           nodes={nodes}
