@@ -293,6 +293,7 @@ function Canvas({
   }, [rootId]);
 
   // Keep the toggled branch in view when a node is expanded or collapsed.
+  const [settling, setSettling] = useState(false);
   const prevExpanded = useRef<Set<string>>(expanded);
   useEffect(() => {
     const prev = prevExpanded.current;
@@ -304,10 +305,15 @@ function Canvas({
     if (!changedId) return;
     const target = changedId;
     const ids = [target, ...(graph.childrenOf.get(target) ?? [])].map((id) => ({ id }));
+    setSettling(true);
     const timer = setTimeout(() => {
       void flow.fitView({ nodes: ids, padding: 0.25, minZoom: 0.55, maxZoom: 0.95, duration: 400 });
     }, 80);
-    return () => clearTimeout(timer);
+    const done = setTimeout(() => setSettling(false), 560);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(done);
+    };
   }, [expanded, flow, graph]);
 
   useEffect(() => {
