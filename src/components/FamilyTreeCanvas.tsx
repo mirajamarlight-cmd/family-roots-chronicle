@@ -423,6 +423,9 @@ function Canvas({
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      // Let buttons inside nodes handle their own Enter/Space activation.
+      const target = e.target as HTMLElement | null;
+      if ((e.key === "Enter" || e.key === " ") && target?.closest("button")) return;
       if (e.key === "ArrowUp") {
         e.preventDefault();
         navigateFocus("up");
