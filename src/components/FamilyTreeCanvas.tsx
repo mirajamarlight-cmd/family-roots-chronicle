@@ -359,7 +359,9 @@ function Canvas({
     const frame = requestAnimationFrame(() => focusToggle(id));
     const after = setTimeout(() => {
       const active = document.activeElement as HTMLElement | null;
-      if (!active || !active.getAttribute?.("data-toggle-id")) focusToggle(id);
+      const movedAway =
+        active && active !== document.body && !containerRef.current?.contains(active);
+      if (!movedAway && active?.getAttribute?.("data-toggle-id") !== id) focusToggle(id);
       restoreFocusRef.current = null;
     }, 620);
     return () => {
