@@ -355,7 +355,7 @@ function Canvas({
     if (!nodes.length || fitForRoot.current === rootId) return;
     fitForRoot.current = rootId;
     requestAnimationFrame(() => {
-      flow.fitView({ padding: 0.2, maxZoom: 1, minZoom: 0.4, duration: 300 });
+      flow.fitView({ padding: 0.22, maxZoom: 1.15, minZoom: 0.4, duration: 300 });
     });
   }, [rootId, nodes.length, flow]);
 
