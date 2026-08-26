@@ -366,10 +366,16 @@ function Canvas({
   // Keep the toggled branch in view when a node is expanded or collapsed.
   const [settling, setSettling] = useState(false);
   const prevExpanded = useRef<Set<string>>(expanded);
+  const didInitialExpand = useRef(false);
   useEffect(() => {
     const prev = prevExpanded.current;
     prevExpanded.current = expanded;
     if (prev === expanded) return;
+    // Skip the first hydration pass (empty set -> default expansion).
+    if (!didInitialExpand.current) {
+      didInitialExpand.current = true;
+      return;
+    }
     let changedId: string | null = null;
     for (const id of expanded) if (!prev.has(id)) changedId = id;
     if (!changedId) for (const id of prev) if (!expanded.has(id)) changedId = id;
