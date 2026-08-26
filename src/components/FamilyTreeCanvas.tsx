@@ -77,9 +77,10 @@ function PersonNode({ id, data }: NodeProps) {
         onClick={() => handlers?.onSelect(id)}
         aria-label={`Open profile for ${d.label}`}
         className={cn(
-          "w-full rounded-xl border bg-card px-3 py-2.5 text-left leaf-shadow transition-all duration-200",
+          "w-full rounded-2xl border bg-card px-3 py-2.5 text-left leaf-shadow transition-all duration-200",
+          "hover:-translate-y-0.5 hover:shadow-md",
           "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-          d.depth === 0 && "pt-3",
+          d.depth === 0 && "bg-gradient-to-b from-primary/8 to-card pt-3",
           d.selected
             ? "border-primary ring-2 ring-primary/35"
             : d.focused
@@ -97,9 +98,14 @@ function PersonNode({ id, data }: NodeProps) {
           {d.label}
         </span>
         <span className="mt-0.5 block text-center text-xs text-muted-foreground">
-          {d.childCount === 0 ? "No children recorded" : `${d.childCount} children`}
+          {d.childCount === 0
+            ? "No children recorded"
+            : d.childCount === 1
+              ? "1 child"
+              : `${d.childCount} children`}
         </span>
       </button>
+
       {d.childCount > 0 && (
         <div className="absolute -bottom-3.5 left-1/2 z-20 -translate-x-1/2">
           <button
