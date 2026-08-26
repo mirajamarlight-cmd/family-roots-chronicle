@@ -77,9 +77,10 @@ function PersonNode({ id, data }: NodeProps) {
         onClick={() => handlers?.onSelect(id)}
         aria-label={`Open profile for ${d.label}`}
         className={cn(
-          "w-full rounded-xl border bg-card px-3 py-2.5 text-left leaf-shadow transition-all duration-200",
+          "w-full rounded-2xl border bg-card px-3 py-2.5 text-left leaf-shadow transition-all duration-200",
+          "hover:-translate-y-0.5 hover:shadow-md",
           "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-          d.depth === 0 && "pt-3",
+          d.depth === 0 && "bg-gradient-to-b from-primary/8 to-card pt-3",
           d.selected
             ? "border-primary ring-2 ring-primary/35"
             : d.focused
@@ -97,9 +98,14 @@ function PersonNode({ id, data }: NodeProps) {
           {d.label}
         </span>
         <span className="mt-0.5 block text-center text-xs text-muted-foreground">
-          {d.childCount === 0 ? "No children recorded" : `${d.childCount} children`}
+          {d.childCount === 0
+            ? "No children recorded"
+            : d.childCount === 1
+              ? "1 child"
+              : `${d.childCount} children`}
         </span>
       </button>
+
       {d.childCount > 0 && (
         <div className="absolute -bottom-3.5 left-1/2 z-20 -translate-x-1/2">
           <button
@@ -122,11 +128,12 @@ function PersonNode({ id, data }: NodeProps) {
             }
             aria-expanded={d.expanded}
             className={cn(
-              "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold shadow-sm transition-colors",
-              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              "flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold leading-none shadow-sm transition-all duration-200",
+              "hover:scale-105 active:scale-95",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
               d.expanded
-                ? "border-border bg-card text-muted-foreground hover:text-foreground"
-                : "border-primary/40 bg-primary text-primary-foreground hover:bg-primary/90",
+                ? "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                : "border-primary/40 bg-primary text-primary-foreground shadow-primary/25 hover:bg-primary/90",
             )}
           >
             {d.expanded ? (
@@ -140,6 +147,7 @@ function PersonNode({ id, data }: NodeProps) {
                 {d.childCount}
               </>
             )}
+
           </button>
         </div>
       )}
@@ -347,7 +355,7 @@ function Canvas({
     if (!nodes.length || fitForRoot.current === rootId) return;
     fitForRoot.current = rootId;
     requestAnimationFrame(() => {
-      flow.fitView({ padding: 0.2, maxZoom: 1, minZoom: 0.4, duration: 300 });
+      flow.fitView({ padding: 0.22, maxZoom: 1.15, minZoom: 0.4, duration: 300 });
     });
   }, [rootId, nodes.length, flow]);
 
@@ -358,10 +366,16 @@ function Canvas({
   // Keep the toggled branch in view when a node is expanded or collapsed.
   const [settling, setSettling] = useState(false);
   const prevExpanded = useRef<Set<string>>(expanded);
+  const didInitialExpand = useRef(false);
   useEffect(() => {
     const prev = prevExpanded.current;
     prevExpanded.current = expanded;
     if (prev === expanded) return;
+    // Skip the first hydration pass (empty set -> default expansion).
+    if (!didInitialExpand.current) {
+      didInitialExpand.current = true;
+      return;
+    }
     let changedId: string | null = null;
     for (const id of expanded) if (!prev.has(id)) changedId = id;
     if (!changedId) for (const id of prev) if (!expanded.has(id)) changedId = id;
@@ -515,8 +529,9 @@ function Canvas({
           <Background color="var(--border)" gap={28} size={1.5} />
           <Controls
             showInteractive={false}
-            className="!rounded-lg !border !border-border !bg-card"
+            className="tree-controls !overflow-hidden !rounded-xl !border !border-border !bg-card/95 !shadow-sm !backdrop-blur"
           />
+
           {nodes.length > 40 && (
             <MiniMap
               className="!rounded-lg !border !border-border !bg-card/90 !bottom-14 !left-3 !h-24 !w-32"
@@ -531,7 +546,9 @@ function Canvas({
           )}
         </ReactFlow>
       </TreeHandlersContext.Provider>
+      <div className="tree-vignette pointer-events-none absolute inset-0 z-10" aria-hidden />
     </div>
+
   );
 }
 

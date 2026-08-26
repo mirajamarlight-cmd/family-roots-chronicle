@@ -53,7 +53,7 @@ function PanelBody({
   person: Person;
   onClose: () => void;
   onNavigatePerson: (id: string) => void;
-  onViewBranch?: (branchId: string) => void;
+  onViewBranch?: ((branchId: string) => void) | undefined;
   closeRef: React.RefObject<HTMLButtonElement | null>;
 }) {
   const parents = graph.parentsOf.get(person.id) ?? [];
@@ -145,7 +145,7 @@ export function PersonPanel({
   personId: string | null;
   onClose: () => void;
   onNavigatePerson: (id: string) => void;
-  onViewBranch?: (branchId: string) => void;
+  onViewBranch?: ((branchId: string) => void) | undefined;
 }) {
   const isMobile = useIsMobile();
   const closeRef = useRef<HTMLButtonElement>(null);

@@ -19,9 +19,9 @@ type RowProps = {
   person: Person;
   duplicateNames: Set<string>;
   mode: "button" | "link";
-  showBranchLink?: boolean;
-  onSelect?: (id: string) => void;
-  compact?: boolean;
+  showBranchLink?: boolean | undefined;
+  onSelect?: ((id: string) => void) | undefined;
+  compact?: boolean | undefined;
 };
 
 function ResultRow({ graph, person, duplicateNames, mode, showBranchLink, onSelect, compact }: RowProps) {

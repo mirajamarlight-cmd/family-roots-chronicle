@@ -179,6 +179,41 @@
   }
 }
 
+/* --- Tree canvas polish --- */
+@utility tree-vignette {
+  background:
+    radial-gradient(
+      140% 110% at 50% 40%,
+      transparent 70%,
+      color-mix(in oklab, var(--color-background) 22%, transparent) 100%
+    );
+}
+
+.tree-controls .react-flow__controls-button {
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+  width: 28px;
+  height: 28px;
+  color: var(--color-muted-foreground);
+  transition:
+    background-color 150ms ease-out,
+    color 150ms ease-out;
+}
+
+.tree-controls .react-flow__controls-button:last-child {
+  border-bottom: none;
+}
+
+.tree-controls .react-flow__controls-button:hover {
+  background: color-mix(in oklab, var(--color-primary) 10%, transparent);
+  color: var(--color-primary);
+}
+
+.tree-controls .react-flow__controls-button svg {
+  fill: currentColor;
+}
+
 /* --- Tree motion: smooth expand/collapse, no jumping --- */
 .react-flow__node {
   transition:
@@ -190,6 +225,7 @@
   transition: stroke 200ms ease-out;
   animation: edge-draw-in 420ms ease-out both;
 }
+
 
 @keyframes edge-draw-in {
   from {
