@@ -523,8 +523,9 @@ function Canvas({
           <Background color="var(--border)" gap={28} size={1.5} />
           <Controls
             showInteractive={false}
-            className="!rounded-lg !border !border-border !bg-card"
+            className="tree-controls !overflow-hidden !rounded-xl !border !border-border !bg-card/95 !shadow-sm !backdrop-blur"
           />
+
           {nodes.length > 40 && (
             <MiniMap
               className="!rounded-lg !border !border-border !bg-card/90 !bottom-14 !left-3 !h-24 !w-32"
