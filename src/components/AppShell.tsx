@@ -64,7 +64,7 @@ export function AppShell({ children, wide }: { children: ReactNode; wide?: boole
                 <Link
                   key={to}
                   to={to}
-                  search={to === "/" ? {} : undefined}
+                  search={{}}
                   resetScroll
                   activeOptions={{ exact: to === "/" }}
                   activeProps={{ className: "bg-primary/10 font-medium text-primary" }}
@@ -118,7 +118,7 @@ export function AppShell({ children, wide }: { children: ReactNode; wide?: boole
             <li key={to}>
               <Link
                 to={to}
-                search={to === "/" ? {} : undefined}
+                search={{}}
                 resetScroll
                 activeOptions={{ exact: to === "/" }}
                 activeProps={{ className: "text-primary after:bg-primary" }}

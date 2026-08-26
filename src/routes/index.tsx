@@ -62,7 +62,7 @@ function HomePage() {
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row">
           <Button asChild>
-            <Link to="/tree" search={yonisId ? { person: yonisId } : undefined}>
+            <Link to="/tree" search={yonisId ? { person: yonisId } : {}}>
               <TreeDeciduous aria-hidden />
               Explore the family tree
             </Link>
@@ -88,7 +88,7 @@ function HomePage() {
           <h2 className="font-display text-xl font-semibold tracking-tight">Why this website exists</h2>
           <p className="mt-2 text-[15px] leading-7 text-foreground/90">{SITE_PURPOSE}</p>
           <Button asChild className="mt-5">
-            <Link to="/tree" search={yonisId ? { person: yonisId } : undefined}>
+            <Link to="/tree" search={yonisId ? { person: yonisId } : {}}>
               <TreeDeciduous aria-hidden />
               Open the family tree
             </Link>
