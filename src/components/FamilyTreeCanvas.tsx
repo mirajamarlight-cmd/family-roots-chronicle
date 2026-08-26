@@ -540,7 +540,9 @@ function Canvas({
           )}
         </ReactFlow>
       </TreeHandlersContext.Provider>
+      <div className="tree-vignette pointer-events-none absolute inset-0 z-10" aria-hidden />
     </div>
+
   );
 }
 
