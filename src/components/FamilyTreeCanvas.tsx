@@ -128,11 +128,12 @@ function PersonNode({ id, data }: NodeProps) {
             }
             aria-expanded={d.expanded}
             className={cn(
-              "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold shadow-sm transition-colors",
-              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              "flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold leading-none shadow-sm transition-all duration-200",
+              "hover:scale-105 active:scale-95",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
               d.expanded
-                ? "border-border bg-card text-muted-foreground hover:text-foreground"
-                : "border-primary/40 bg-primary text-primary-foreground hover:bg-primary/90",
+                ? "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                : "border-primary/40 bg-primary text-primary-foreground shadow-primary/25 hover:bg-primary/90",
             )}
           >
             {d.expanded ? (
@@ -146,6 +147,7 @@ function PersonNode({ id, data }: NodeProps) {
                 {d.childCount}
               </>
             )}
+
           </button>
         </div>
       )}
