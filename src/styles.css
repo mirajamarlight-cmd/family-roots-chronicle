@@ -183,9 +183,9 @@
 @utility tree-vignette {
   background:
     radial-gradient(
-      120% 90% at 50% 0%,
-      transparent 55%,
-      color-mix(in oklab, var(--color-background) 45%, transparent) 100%
+      140% 110% at 50% 40%,
+      transparent 70%,
+      color-mix(in oklab, var(--color-background) 22%, transparent) 100%
     );
 }
 
