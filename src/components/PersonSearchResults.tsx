@@ -1,9 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import { GitBranch } from "lucide-react";
 
+import { FamilyPlace } from "@/components/family-place";
 import { PersonAvatarBadge } from "@/components/person-identity";
 import type { FamilyGraph, Person } from "@/lib/family";
-import { lineageLabel } from "@/lib/family";
 import { cn } from "@/lib/utils";
 
 export function useDuplicateNames(results: Person[]) {
@@ -17,48 +17,25 @@ export function useDuplicateNames(results: Person[]) {
 type RowProps = {
   graph: FamilyGraph;
   person: Person;
-  duplicateNames: Set<string>;
   mode: "button" | "link";
   showBranchLink?: boolean | undefined;
   onSelect?: ((id: string) => void) | undefined;
   compact?: boolean | undefined;
 };
 
-function ResultRow({ graph, person, duplicateNames, mode, showBranchLink, onSelect, compact }: RowProps) {
-  const path = lineageLabel(graph, person.id);
-  const parentId = graph.parentsOf.get(person.id)?.[0];
-  const parentName = parentId ? graph.byId.get(parentId)?.display_name : null;
+function ResultRow({ graph, person, mode, showBranchLink, onSelect, compact }: RowProps) {
   const branchId = graph.branchOf.get(person.id);
-  const branchName = branchId ? graph.byId.get(branchId)?.display_name : null;
-  const isDuplicate = duplicateNames.has(person.display_name);
 
   const inner = (
     <>
       <PersonAvatarBadge graph={graph} personId={person.id} size={compact ? "sm" : "md"} />
-      <span className="min-w-0 flex-1">
-        <span className="font-medium">{person.display_name}</span>
-        <span
-          className={cn(
-            "mt-0.5 block text-sm leading-snug",
-            isDuplicate ? "font-medium text-foreground/85" : "text-muted-foreground",
-          )}
-        >
-          {path}
-        </span>
-        {isDuplicate && (parentName || branchName) && (
-          <span className="mt-0.5 block text-xs text-muted-foreground">
-            {[parentName && `Parent: ${parentName}`, branchName && `Branch: ${branchName}`]
-              .filter(Boolean)
-              .join(" · ")}
-          </span>
-        )}
-      </span>
+      <FamilyPlace graph={graph} personId={person.id} compact={compact} className="flex-1" />
       {showBranchLink && branchId && mode === "link" && (
         <Link
           to="/tree"
           search={{ root: branchId }}
           onClick={(e) => e.stopPropagation()}
-          className="shrink-0 rounded-full border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary/60"
+          className="mt-0.5 shrink-0 rounded-full border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary/60"
         >
           <GitBranch className="mr-1 inline size-3" aria-hidden />
           Branch
@@ -68,7 +45,7 @@ function ResultRow({ graph, person, duplicateNames, mode, showBranchLink, onSele
   );
 
   const rowClass = cn(
-    "flex w-full items-center gap-3 text-left transition-colors hover:bg-secondary/60",
+    "flex w-full items-start gap-3 text-left transition-colors hover:bg-secondary/60",
     compact ? "px-3 py-2" : "px-4 py-3",
   );
 
@@ -127,7 +104,6 @@ export function PersonSearchResults({
           <ResultRow
             graph={graph}
             person={p}
-            duplicateNames={duplicateNames}
             mode={mode}
             showBranchLink={showBranchLink}
             onSelect={onSelect}

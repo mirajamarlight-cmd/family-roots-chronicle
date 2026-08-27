@@ -13,7 +13,7 @@ import { BuiltByRaafat } from "@/components/brand/built-by-raafat";
 import { Toaster } from "@/components/ui/sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { SITE_NAME } from "../lib/brand";
+import { SITE_NAME, SITE_ORIGIN, YONIS_PORTRAIT_PATH } from "../lib/brand";
 
 function BrandedFallback({
   title,
@@ -109,7 +109,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         property: "og:description",
         content: "Explore the documented Feqi Yonis family tree.",
       },
-      { property: "og:image", content: "/yonis.png" },
+      { property: "og:url", content: SITE_ORIGIN },
+      { property: "og:image", content: `${SITE_ORIGIN}${YONIS_PORTRAIT_PATH}` },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -118,6 +119,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
+      { rel: "canonical", href: SITE_ORIGIN },
       { rel: "icon", href: "/favicon.png", type: "image/png" },
       { rel: "apple-touch-icon", href: "/logo.png", sizes: "192x192" },
     ],

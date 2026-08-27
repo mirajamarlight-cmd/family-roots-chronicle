@@ -1,5 +1,5 @@
 import { ChevronRight } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 
 import { PersonAvatarBadge } from "@/components/person-identity";
 import { descendantCount, type FamilyGraph } from "@/lib/family";
@@ -37,6 +37,7 @@ type TreeItemProps = {
   showMeta?: boolean;
   orderedIds: string[];
   itemRef: (id: string, el: HTMLLIElement | null) => void;
+  renderEnd?: ((id: string) => ReactNode) | undefined;
 };
 
 function TreeItem({
@@ -54,6 +55,7 @@ function TreeItem({
   showMeta = true,
   orderedIds,
   itemRef,
+  renderEnd,
 }: TreeItemProps) {
   if (!visible.has(id)) return null;
 
@@ -116,8 +118,7 @@ function TreeItem({
         onKeyDown={handleKeyDown}
         className={cn(
           "flex items-center gap-2 rounded-lg py-1.5 pl-1 pr-2 outline-none",
-          "focus-visible:ring-1 focus-visible:ring-ring",
-          hasKids && "cursor-pointer hover:bg-accent/40",
+          "cursor-pointer hover:bg-accent/40 focus-visible:ring-1 focus-visible:ring-ring",
           selfMatch.has(id) && "bg-secondary/50",
           isSelected && "ring-1 ring-primary/40",
         )}
@@ -150,8 +151,20 @@ function TreeItem({
           </span>
         )}
 
-        {showMeta && person.notes && (
-          <span className="text-[11px] italic text-muted-foreground">{person.notes}</span>
+        {showMeta && person.notes && !renderEnd && (
+          <span className="min-w-0 truncate text-[11px] italic text-muted-foreground">
+            {person.notes}
+          </span>
+        )}
+
+        {renderEnd && (
+          <span
+            className="ml-auto flex shrink-0 items-center gap-0.5"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            {renderEnd(id)}
+          </span>
         )}
       </div>
 
@@ -177,6 +190,7 @@ function TreeItem({
               showMeta={showMeta}
               orderedIds={orderedIds}
               itemRef={itemRef}
+              renderEnd={renderEnd}
             />
           ))}
         </ul>
@@ -218,6 +232,7 @@ export function AccessibleFamilyTree({
   showMeta = true,
   className,
   ariaLabel,
+  renderEnd,
 }: {
   graph: FamilyGraph;
   rootId: string;
@@ -233,6 +248,7 @@ export function AccessibleFamilyTree({
   showMeta?: boolean | undefined;
   className?: string | undefined;
   ariaLabel?: string | undefined;
+  renderEnd?: ((id: string) => ReactNode) | undefined;
 }) {
   const itemRefs = useRef(new Map<string, HTMLLIElement>());
   const rootName = graph.byId.get(rootId)?.display_name ?? "Unknown";
@@ -285,6 +301,7 @@ export function AccessibleFamilyTree({
         showMeta={showMeta}
         orderedIds={orderedIds}
         itemRef={setItemRef}
+        renderEnd={renderEnd}
       />
     </ul>
   );

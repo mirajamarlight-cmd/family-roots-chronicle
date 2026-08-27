@@ -1,0 +1,15 @@
+.git
+.github
+.output
+.nitro
+.tanstack
+.wrangler
+.cursor
+node_modules
+dist
+*.local
+.env
+.env.*
+!.env.example
+*.md
+AGENTS.md

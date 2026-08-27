@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { BarChart3, GitCompare, House, Search, Settings, TreeDeciduous } from "lucide-react";
+import { BarChart3, GitCompare, House, Search, Settings, TreeDeciduous, UserPlus } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { BuiltByRaafat } from "@/components/brand/built-by-raafat";
@@ -52,12 +52,21 @@ export function AppShell({ children, wide }: { children: ReactNode; wide?: boole
           </Link>
           <div className="flex items-center gap-1">
             <Link
-              to="/admin"
+              to="/join"
               activeProps={{ className: "bg-primary/10 text-primary" }}
               className={cn(navLinkClass, "gap-1 px-2.5 md:hidden")}
             >
+              <UserPlus className="size-4" aria-hidden />
+              Join
+            </Link>
+            <Link
+              to="/admin"
+              activeProps={{ className: "bg-primary/10 text-primary" }}
+              className={cn(navLinkClass, "px-2 md:hidden")}
+              aria-label="Admin"
+              title="Admin"
+            >
               <Settings className="size-4" aria-hidden />
-              Admin
             </Link>
             <nav className="hidden items-center gap-1 md:flex">
               {NAV.map(({ to, label, icon: Icon }) => (
@@ -82,6 +91,14 @@ export function AppShell({ children, wide }: { children: ReactNode; wide?: boole
                   {label}
                 </Link>
               ))}
+              <Link
+                to="/join"
+                activeProps={{ className: "bg-primary/10 font-medium text-primary" }}
+                className={navLinkClass}
+              >
+                <UserPlus className="size-4" aria-hidden />
+                Join
+              </Link>
               <Link
                 to="/admin"
                 activeProps={{ className: "bg-primary/10 font-medium text-primary" }}

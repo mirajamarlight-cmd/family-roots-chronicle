@@ -1,5 +1,5 @@
 export const HOME_HERO = {
-  title: "Faqih Younis Abdosh",
+  title: "Faqih Yonis Abdosh",
   subtitle: "Islamic scholar, jurist, judge, and community leader from Harar, Ethiopia.",
   recordNote: "Known in the family record as Yonis, the root of this tree.",
 } as const;
@@ -30,12 +30,12 @@ export const HOME_SECTIONS = [
   {
     id: "service",
     title: "Titles and service",
-    body: "Faqih Younis was known by several scholarly titles. Much of his life was devoted to serving as a Sharia judge in Harar and later in Addis Ababa. He was respected for his courage, fairness, knowledge, and commitment to judging according to Islamic law.",
+    body: "Faqih Yonis was known by several scholarly titles. Much of his life was devoted to serving as a Sharia judge in Harar and later in Addis Ababa. He was respected for his courage, fairness, knowledge, and commitment to judging according to Islamic law.",
   },
   {
     id: "mediator",
     title: "Mediator during occupation",
-    body: "He was also remembered for his role as a mediator during the Italian occupation of Ethiopia. Following the assassination attempt against Rodolfo Graziani in Addis Ababa in 1937 and the subsequent violence against civilians, Faqih Younis used his influence to mediate between Ethiopian resistance figures and Italian forces, helping bring an end to violence against innocent people.",
+    body: "He was also remembered for his role as a mediator during the Italian occupation of Ethiopia. Following the assassination attempt against Rodolfo Graziani in Addis Ababa in 1937 and the subsequent violence against civilians, Faqih Yonis used his influence to mediate between Ethiopian resistance figures and Italian forces, helping bring an end to violence against innocent people.",
   },
   {
     id: "legacy",
@@ -45,4 +45,4 @@ export const HOME_SECTIONS = [
 ] as const;
 
 export const SITE_PURPOSE =
-  "This site preserves and shares the documented lineage of Faqih Younis Abdosh’s descendants — the Feqi Yonis family — across generations. Relatives can explore the tree, search by name, and see how they connect. It is a living record meant to keep family history accessible to current and future generations.";
+  "This site preserves and shares the documented lineage of Faqih Yonis Abdosh’s descendants — the Feqi Yonis family — across generations. Relatives can explore the tree, search by name, and see how they connect. It is a living record meant to keep family history accessible to current and future generations.";

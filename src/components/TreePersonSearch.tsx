@@ -12,11 +12,15 @@ export function TreePersonSearch({
   onSelectPerson,
   className,
   inputClassName,
+  inline = false,
+  placeholder = "Find someone…",
 }: {
   graph: FamilyGraph;
   onSelectPerson: (id: string) => void;
   className?: string;
   inputClassName?: string;
+  inline?: boolean | undefined;
+  placeholder?: string | undefined;
 }) {
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -60,7 +64,7 @@ export function TreePersonSearch({
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        placeholder="Find someone…"
+        placeholder={placeholder}
         aria-label="Search family members"
         aria-expanded={showDropdown}
         aria-controls="tree-person-search-results"
@@ -72,7 +76,10 @@ export function TreePersonSearch({
       {showDropdown && (
         <div
           id="tree-person-search-results"
-          className="pointer-events-auto absolute inset-x-0 top-[calc(100%+0.25rem)] z-50 overflow-hidden rounded-lg border border-border bg-card shadow-lg"
+          className={cn(
+            "pointer-events-auto z-50 overflow-hidden rounded-lg border border-border bg-card shadow-lg",
+            inline ? "mt-1" : "absolute inset-x-0 top-[calc(100%+0.25rem)]",
+          )}
         >
           <PersonSearchResults
             graph={graph}

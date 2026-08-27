@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Search, TreeDeciduous } from "lucide-react";
+import { Search, TreeDeciduous, UserPlus } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 import { ContentCard } from "@/components/ContentCard";
@@ -11,7 +11,7 @@ import {
   SITE_PURPOSE,
 } from "@/content/home";
 import { useFamilyGraph } from "@/hooks/useFamily";
-import { SITE_NAME, YONIS_PORTRAIT_PATH } from "@/lib/brand";
+import { SITE_NAME, SITE_ORIGIN, YONIS_PORTRAIT_PATH } from "@/lib/brand";
 import { canonicalRootId } from "@/lib/family";
 
 export const Route = createFileRoute("/")({
@@ -21,7 +21,8 @@ export const Route = createFileRoute("/")({
       { name: "description", content: SITE_PURPOSE },
       { property: "og:title", content: `${HOME_HERO.title} — ${SITE_NAME}` },
       { property: "og:description", content: HOME_HERO.subtitle },
-      { property: "og:image", content: YONIS_PORTRAIT_PATH },
+      { property: "og:url", content: SITE_ORIGIN },
+      { property: "og:image", content: `${SITE_ORIGIN}${YONIS_PORTRAIT_PATH}` },
     ],
   }),
   component: HomePage,
@@ -73,6 +74,12 @@ function HomePage() {
               Search relatives
             </Link>
           </Button>
+          <Button asChild variant="outline">
+            <Link to="/join">
+              <UserPlus aria-hidden />
+              Add yourself
+            </Link>
+          </Button>
         </div>
 
         <div className="mt-10 space-y-8">
@@ -87,12 +94,25 @@ function HomePage() {
         <ContentCard className="mt-10 border-primary/20 bg-primary/5">
           <h2 className="font-display text-xl font-semibold tracking-tight">Why this website exists</h2>
           <p className="mt-2 text-[15px] leading-7 text-foreground/90">{SITE_PURPOSE}</p>
-          <Button asChild className="mt-5">
-            <Link to="/tree" search={yonisId ? { person: yonisId } : {}}>
-              <TreeDeciduous aria-hidden />
-              Open the family tree
-            </Link>
-          </Button>
+          <p className="mt-3 text-[15px] leading-7 text-foreground/90">
+            If you are part of this family and want to be on the record, you can add yourself. If a parent
+            has passed and is not listed yet, you can add them with your own details. An admin reviews
+            every submission before it appears on the tree.
+          </p>
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+            <Button asChild>
+              <Link to="/tree" search={yonisId ? { person: yonisId } : {}}>
+                <TreeDeciduous aria-hidden />
+                Open the family tree
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/join">
+                <UserPlus aria-hidden />
+                Add yourself
+              </Link>
+            </Button>
+          </div>
         </ContentCard>
       </article>
     </AppShell>

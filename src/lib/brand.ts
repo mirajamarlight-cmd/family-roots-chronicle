@@ -1,6 +1,7 @@
 import type { FamilyGraph } from "@/lib/family";
 
 export const SITE_NAME = "Feqi Yonis Family Tree";
+export const SITE_ORIGIN = "https://babafeqi.raafat.site";
 export const YONIS_PORTRAIT_PATH = "/yonis.png";
 export const SITE_LOGO_PATH = "/logo.png";
 

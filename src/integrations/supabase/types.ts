@@ -95,6 +95,159 @@ export type Database = {
           },
         ]
       }
+      person_claims: {
+        Row: {
+          address: string
+          created_at: string
+          email: string
+          person_id: string
+          phone: string
+          user_id: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          email: string
+          person_id: string
+          phone: string
+          user_id: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          email?: string
+          person_id?: string
+          phone?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "person_claims_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: true
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      person_submissions: {
+        Row: {
+          added_parent_birth_date: string | null
+          added_parent_death_date: string | null
+          added_parent_first_name: string | null
+          added_parent_last_name: string | null
+          added_parent_middle_name: string | null
+          added_parent_of: string | null
+          address: string
+          birth_date: string
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          kind: string
+          last_name: string | null
+          link_side: string | null
+          middle_name: string | null
+          notes: string | null
+          other_parent_birth_date: string | null
+          other_parent_death_date: string | null
+          other_parent_first_name: string | null
+          other_parent_last_name: string | null
+          other_parent_middle_name: string | null
+          other_parent_name: string | null
+          parent_id: string | null
+          person_id: string | null
+          phone: string
+          reviewed_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          added_parent_birth_date?: string | null
+          added_parent_death_date?: string | null
+          added_parent_first_name?: string | null
+          added_parent_last_name?: string | null
+          added_parent_middle_name?: string | null
+          added_parent_of?: string | null
+          address: string
+          birth_date: string
+          created_at?: string
+          email: string
+          first_name: string
+          id?: string
+          kind: string
+          last_name?: string | null
+          link_side?: string | null
+          middle_name?: string | null
+          notes?: string | null
+          other_parent_birth_date?: string | null
+          other_parent_death_date?: string | null
+          other_parent_first_name?: string | null
+          other_parent_last_name?: string | null
+          other_parent_middle_name?: string | null
+          other_parent_name?: string | null
+          parent_id?: string | null
+          person_id?: string | null
+          phone: string
+          reviewed_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          added_parent_birth_date?: string | null
+          added_parent_death_date?: string | null
+          added_parent_first_name?: string | null
+          added_parent_last_name?: string | null
+          added_parent_middle_name?: string | null
+          added_parent_of?: string | null
+          address?: string
+          birth_date?: string
+          created_at?: string
+          email?: string
+          first_name?: string
+          id?: string
+          kind?: string
+          last_name?: string | null
+          link_side?: string | null
+          middle_name?: string | null
+          notes?: string | null
+          other_parent_birth_date?: string | null
+          other_parent_death_date?: string | null
+          other_parent_first_name?: string | null
+          other_parent_last_name?: string | null
+          other_parent_middle_name?: string | null
+          other_parent_name?: string | null
+          parent_id?: string | null
+          person_id?: string | null
+          phone?: string
+          reviewed_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "person_submissions_added_parent_of_fkey"
+            columns: ["added_parent_of"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "person_submissions_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "person_submissions_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       people: {
         Row: {
           birth_date: string | null
@@ -166,6 +319,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_submission: { Args: { _id: string }; Returns: string }
       claim_admin: { Args: never; Returns: boolean }
       has_role: {
         Args: {
@@ -174,6 +328,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      reject_submission: { Args: { _id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as JoinRouteImport } from './routes/join'
 import { Route as RelationshipRouteImport } from './routes/relationship'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as StatisticsRouteImport } from './routes/statistics'
@@ -24,6 +25,11 @@ const IndexRoute = IndexRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JoinRoute = JoinRouteImport.update({
+  id: '/join',
+  path: '/join',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RelationshipRoute = RelationshipRouteImport.update({
@@ -50,6 +56,7 @@ const TreeRoute = TreeRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/join': typeof JoinRoute
   '/relationship': typeof RelationshipRoute
   '/search': typeof SearchRoute
   '/statistics': typeof StatisticsRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/join': typeof JoinRoute
   '/relationship': typeof RelationshipRoute
   '/search': typeof SearchRoute
   '/statistics': typeof StatisticsRoute
@@ -67,6 +75,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/join': typeof JoinRoute
   '/relationship': typeof RelationshipRoute
   '/search': typeof SearchRoute
   '/statistics': typeof StatisticsRoute
@@ -75,13 +84,27 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/admin' | '/relationship' | '/search' | '/statistics' | '/tree'
+    | '/'
+    | '/admin'
+    | '/join'
+    | '/relationship'
+    | '/search'
+    | '/statistics'
+    | '/tree'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/relationship' | '/search' | '/statistics' | '/tree'
+  to:
+    | '/'
+    | '/admin'
+    | '/join'
+    | '/relationship'
+    | '/search'
+    | '/statistics'
+    | '/tree'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/join'
     | '/relationship'
     | '/search'
     | '/statistics'
@@ -91,6 +114,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  JoinRoute: typeof JoinRoute
   RelationshipRoute: typeof RelationshipRoute
   SearchRoute: typeof SearchRoute
   StatisticsRoute: typeof StatisticsRoute
@@ -111,6 +135,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/join': {
+      id: '/join'
+      path: '/join'
+      fullPath: '/join'
+      preLoaderRoute: typeof JoinRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/relationship': {
@@ -147,6 +178,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  JoinRoute: JoinRoute,
   RelationshipRoute: RelationshipRoute,
   SearchRoute: SearchRoute,
   StatisticsRoute: StatisticsRoute,

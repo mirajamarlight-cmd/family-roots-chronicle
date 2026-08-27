@@ -133,16 +133,48 @@ export function descendantCount(graph: FamilyGraph, id: string): number {
   return count;
 }
 
+function canReachAncestor(graph: FamilyGraph, fromId: string, ancestorId: string): boolean {
+  const seen = new Set<string>();
+  const stack = [fromId];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    if (cur === ancestorId) return true;
+    if (seen.has(cur)) continue;
+    seen.add(cur);
+    stack.push(...(graph.parentsOf.get(cur) ?? []));
+  }
+  return false;
+}
+
+/** Parent that leads toward the canonical root, else the first recorded parent. */
+function parentTowardRoot(graph: FamilyGraph, id: string): string | undefined {
+  const parents = graph.parentsOf.get(id) ?? [];
+  if (parents.length <= 1) return parents[0];
+  const rootId =
+    graph.roots.find((r) => graph.byId.get(r)?.display_name === "Yonis") ?? graph.roots[0];
+  if (!rootId) return parents[0];
+  return parents.find((pid) => pid === rootId || canReachAncestor(graph, pid, rootId)) ?? parents[0];
+}
+
+export function recordedParents(graph: FamilyGraph, id: string) {
+  return (graph.parentsOf.get(id) ?? []).map((pid) => {
+    const person = graph.byId.get(pid);
+    const gender = (person?.gender ?? "").toLowerCase();
+    const role = gender === "male" ? "Father" : gender === "female" ? "Mother" : "Parent";
+    return { id: pid, name: person?.display_name ?? "Unknown", role };
+  });
+}
+
 /** Ancestor chain from the root down to (and excluding) the person. */
 export function ancestryPath(graph: FamilyGraph, id: string): Person[] {
   const path: Person[] = [];
   const seen = new Set<string>([id]);
-  let current = graph.parentsOf.get(id)?.[0];
+  let current = parentTowardRoot(graph, id);
   while (current && !seen.has(current)) {
     seen.add(current);
     const person = graph.byId.get(current);
     if (person) path.unshift(person);
-    current = graph.parentsOf.get(current)?.[0];
+    current = parentTowardRoot(graph, current);
   }
   return path;
 }
