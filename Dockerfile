@@ -1,6 +1,8 @@
 # Coolify: Dockerfile build pack, port 3000, domain https://babafeqi.raafat.site
 # Mark VITE_* env vars as available at build time in Coolify.
-FROM oven/bun:1 AS build
+# Pin bun to the lockfile's version — oven/bun:1 floated to 1.4 and failed
+# IntegrityCheckFailed extracting @eslint/eslintrc.
+FROM oven/bun:1.3.14 AS build
 WORKDIR /app
 
 COPY package.json bun.lock bunfig.toml ./
