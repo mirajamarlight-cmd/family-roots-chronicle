@@ -431,7 +431,8 @@ export function JoinRecordForm({
       <fieldset className="space-y-3 rounded-2xl border border-border bg-card/60 p-4">
         <legend className="px-1 text-sm font-medium">Your details</legend>
         <p className="text-sm text-muted-foreground">
-          Address, phone, and email stay off the public tree. Required fields are marked *.
+          Address, phone, and email appear on this person’s profile after an admin approves. Required
+          fields are marked *.
         </p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">

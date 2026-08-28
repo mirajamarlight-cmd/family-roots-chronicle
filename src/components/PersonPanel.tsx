@@ -2,6 +2,7 @@ import { GitBranch, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { PersonAvatarBadge } from "@/components/person-identity";
+import { PersonContact } from "@/components/PersonContact";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -99,10 +100,7 @@ function PanelBody({
           variant="outline"
           size="sm"
           className="w-full justify-center gap-2"
-          onClick={() => {
-            onViewBranch?.(branchId);
-            onClose();
-          }}
+          onClick={() => onViewBranch?.(branchId)}
         >
           <GitBranch className="size-4" />
           View this branch in tree
@@ -130,6 +128,8 @@ function PanelBody({
           <p className="text-sm leading-relaxed">{person.notes}</p>
         </section>
       )}
+
+      <PersonContact personId={person.id} />
     </>
   );
 }

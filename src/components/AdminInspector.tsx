@@ -1,15 +1,14 @@
 import { X } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 
 import { PersonAvatarBadge } from "@/components/person-identity";
+import { PersonContact } from "@/components/PersonContact";
 import { RelationshipManager } from "@/components/RelationshipManager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { supabase } from "@/integrations/supabase/client";
 import { descendantCount, type FamilyGraph, type Person } from "@/lib/family";
 import { cn } from "@/lib/utils";
 
@@ -179,7 +178,7 @@ function InspectorBody({
 
       {draft.id && <RelationshipManager graph={graph} personId={draft.id} />}
 
-      {draft.id && <ClaimedContact personId={draft.id} />}
+      {draft.id && <PersonContact personId={draft.id} className="space-y-1.5 rounded-xl border border-border bg-secondary/40 p-3" />}
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <Button onClick={onSave} disabled={busy}>
@@ -192,32 +191,6 @@ function InspectorBody({
         )}
       </div>
     </>
-  );
-}
-
-function ClaimedContact({ personId }: { personId: string }) {
-  const { data } = useQuery({
-    queryKey: ["person-claim", personId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("person_claims")
-        .select("address, phone, email")
-        .eq("person_id", personId)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-  });
-  if (!data) return null;
-  return (
-    <section className="space-y-1.5 rounded-xl border border-border bg-secondary/40 p-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Contact (from their submission)
-      </h3>
-      <p className="text-sm">{data.address}</p>
-      <p className="text-sm">{data.phone}</p>
-      <p className="text-sm">{data.email}</p>
-    </section>
   );
 }
 

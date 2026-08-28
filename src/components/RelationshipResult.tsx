@@ -8,9 +8,32 @@ import { Button } from "@/components/ui/button";
 import type { FamilyGraph } from "@/lib/family";
 import {
   formatRelationshipSentence,
+  formatRelationshipStory,
   getRelationshipBridge,
   type RelationshipResult,
+  type StorySpan,
 } from "@/lib/relationship-finder";
+
+function StoryLine({ graph, spans }: { graph: FamilyGraph; spans: StorySpan[] }) {
+  return (
+    <p className="text-sm leading-relaxed">
+      {spans.map((span, i) => {
+        if ("t" in span) return <span key={i}>{span.t}</span>;
+        const name = graph.byId.get(span.id)?.display_name ?? "Unknown";
+        return (
+          <Link
+            key={`${span.id}-${i}`}
+            to="/tree"
+            search={{ person: span.id }}
+            className="font-medium text-primary underline-offset-2 hover:underline"
+          >
+            {name}
+          </Link>
+        );
+      })}
+    </p>
+  );
+}
 
 export function RelationshipResultCard({
   graph,
@@ -20,6 +43,7 @@ export function RelationshipResultCard({
   result: RelationshipResult;
 }) {
   const sentence = formatRelationshipSentence(graph, result);
+  const story = formatRelationshipStory(graph, result);
   const bridge = getRelationshipBridge(result);
   const personA = graph.byId.get(result.aId);
   const personB = graph.byId.get(result.bId);
@@ -44,6 +68,14 @@ export function RelationshipResultCard({
       )}
 
       <p className="text-center font-display text-lg font-semibold leading-snug sm:text-xl">{sentence}</p>
+
+      {story.length > 0 && (
+        <div className="space-y-2 rounded-xl border border-border bg-secondary/30 px-4 py-3">
+          {story.map((spans, i) => (
+            <StoryLine key={i} graph={graph} spans={spans} />
+          ))}
+        </div>
+      )}
 
       {result.kind === "unrelated" && (
         <p className="text-center text-sm text-muted-foreground">

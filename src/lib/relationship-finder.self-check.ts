@@ -1,6 +1,7 @@
 import {
   findRelationship,
   formatRelationshipSentence,
+  formatRelationshipStory,
 } from "./relationship-finder.ts";
 import type { FamilyGraph, Link, Person } from "./family.ts";
 
@@ -102,5 +103,51 @@ expectSentence("khedra", "abdosh", "sister");
 expectSentence("hamdi", "ali", "cousin");
 expectSentence("yonis", "hamdi", "grand");
 expectSentence("hamdi", "hamdi", "same person");
+
+function storyText(aId: string, bId: string): string {
+  const result = findRelationship(fixture, aId, bId);
+  return formatRelationshipStory(fixture, result)
+    .map((line) =>
+      line
+        .map((span) => ("t" in span ? span.t : (fixture.byId.get(span.id)?.display_name ?? "")))
+        .join(""),
+    )
+    .join(" ");
+}
+
+function expectPath(aId: string, bId: string, pathA: string, pathB: string): void {
+  const result = findRelationship(fixture, aId, bId);
+  if (result.kind !== "related") {
+    throw new Error(`Expected related for ${aId}/${bId}, got ${result.kind}`);
+  }
+  const gotA = result.pathFromLcaToA.join(">");
+  const gotB = result.pathFromLcaToB.join(">");
+  if (gotA !== pathA || gotB !== pathB) {
+    throw new Error(`Path mismatch for ${aId}/${bId}: ${gotA} / ${gotB}`);
+  }
+}
+
+expectPath("hamdi", "ali", "ahmed>abdosh>hamdi", "ahmed>fatuma>ali");
+expectPath("khedra", "hamdi", "ahmed>khedra", "ahmed>abdosh>hamdi");
+expectPath("yonis", "hamdi", "yonis", "yonis>ahmed>abdosh>hamdi");
+
+const hamdiAli = storyText("hamdi", "ali");
+if (!hamdiAli.includes("Hamdi is the son of Abdosh")) {
+  throw new Error(`Hamdi lineage missing in: ${hamdiAli}`);
+}
+if (!hamdiAli.includes("Ali is the son of Fatuma")) {
+  throw new Error(`Ali lineage missing in: ${hamdiAli}`);
+}
+if (!hamdiAli.includes("related through Ahmed")) {
+  throw new Error(`Shared ancestor missing in: ${hamdiAli}`);
+}
+
+const khedraHamdi = storyText("khedra", "hamdi");
+if (!khedraHamdi.includes("Khedra is the daughter of Ahmed")) {
+  throw new Error(`Aunt lineage missing in: ${khedraHamdi}`);
+}
+if (!khedraHamdi.includes("Hamdi is the son of Abdosh")) {
+  throw new Error(`Nephew lineage missing in: ${khedraHamdi}`);
+}
 
 console.log("relationship-finder self-check passed");

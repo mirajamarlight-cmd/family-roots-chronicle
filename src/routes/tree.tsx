@@ -215,17 +215,22 @@ function TreePage() {
   const viewBranch = useCallback(
     (branchId: string) => {
       if (!graph) return;
-      setSelected(null);
-      setFocusedNodeId(null);
-      setExpanded(defaultExpanded(graph, branchId));
-      const name = graph.byId.get(branchId)?.display_name ?? "branch";
-      setLiveMessage(`Viewing ${name}'s branch`);
+      const personId = selected;
+      const path = personId ? ancestryPath(graph, personId).map((p) => p.id) : [];
+      setExpanded(new Set([branchId, ...path, ...(personId ? [personId] : [])]));
+      setFocusedNodeId(personId);
+      const name = graph.byId.get(personId ?? branchId)?.display_name ?? "branch";
+      setLiveMessage(`Viewing ${name} in this branch`);
       navigate({
-        search: (prev) => ({ ...prev, root: branchId, person: undefined }),
+        search: (prev) => ({
+          ...prev,
+          root: branchId,
+          person: personId ?? undefined,
+        }),
         replace: true,
       });
     },
-    [graph, navigate],
+    [graph, navigate, selected],
   );
 
   const collectSubtree = useCallback(() => {

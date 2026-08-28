@@ -56,8 +56,9 @@ export function pathUpTo(
     path.push(cur);
     if (cur === ancestorId) break;
     const parents = graph.parentsOf.get(cur) ?? [];
+    // distances are from `fromId` (self = 0), so the next ancestor is farther
     const next = parents
-      .filter((p) => distances.has(p) && distances.get(p)! < distances.get(cur)!)
+      .filter((p) => distances.has(p) && distances.get(p)! > distances.get(cur)!)
       .sort((x, y) => distances.get(x)! - distances.get(y)!)[0];
     if (!next) break;
     cur = next;
@@ -243,6 +244,47 @@ export function formatRelationshipSentence(graph: FamilyGraph, result: Relations
     return `${personName(graph, result.aId)} and ${personName(graph, result.bId)} have no documented blood relationship.`;
   }
   return `${personName(graph, result.aId)} is the ${result.relation} of ${personName(graph, result.bId)}.`;
+}
+
+export type StorySpan = { t: string } | { id: string };
+
+function childRole(graph: FamilyGraph, childId: string): string {
+  const person = graph.byId.get(childId);
+  if (person?.gender === "male") return "son";
+  if (person?.gender === "female") return "daughter";
+  return "child";
+}
+
+/** "Hamdi is the son of Abdosh, who is the son of Ahmed." */
+function lineageSpans(graph: FamilyGraph, pathFromLca: string[]): StorySpan[] | null {
+  if (pathFromLca.length < 2) return null;
+  const personId = pathFromLca[pathFromLca.length - 1]!;
+  const parts: StorySpan[] = [{ id: personId }, { t: " is the " }];
+  for (let i = pathFromLca.length - 1; i >= 1; i--) {
+    const child = pathFromLca[i]!;
+    const parent = pathFromLca[i - 1]!;
+    if (i < pathFromLca.length - 1) parts.push({ t: ", who is the " });
+    parts.push({ t: `${childRole(graph, child)} of ` }, { id: parent });
+  }
+  parts.push({ t: "." });
+  return parts;
+}
+
+/** How A and B connect, with every named person as a span `{ id }` for linking. */
+export function formatRelationshipStory(
+  graph: FamilyGraph,
+  result: RelationshipResult,
+): StorySpan[][] {
+  if (result.kind !== "related") return [];
+  const lines: StorySpan[][] = [];
+  const aLine = lineageSpans(graph, result.pathFromLcaToA);
+  const bLine = lineageSpans(graph, result.pathFromLcaToB);
+  if (aLine) lines.push(aLine);
+  if (bLine) lines.push(bLine);
+  if (aLine || bLine) {
+    lines.push([{ t: "They are related through " }, { id: result.lcaId }, { t: "." }]);
+  }
+  return lines;
 }
 
 export function formatRelationshipPath(graph: FamilyGraph, ids: string[]): string {
