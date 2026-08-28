@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Search, TreeDeciduous, UserPlus } from "lucide-react";
+import { MessageCircle, Phone, Search, TreeDeciduous, UserPlus } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 import { ContentCard } from "@/components/ContentCard";
 import { Button } from "@/components/ui/button";
 import {
+  HOME_CONTACT,
   HOME_HERO,
   HOME_SECTIONS,
   SCHOLARLY_TITLES,
@@ -111,6 +112,25 @@ function HomePage() {
                 <UserPlus aria-hidden />
                 Add yourself
               </Link>
+            </Button>
+          </div>
+        </ContentCard>
+
+        <ContentCard className="mt-6">
+          <h2 className="font-display text-xl font-semibold tracking-tight">{HOME_CONTACT.title}</h2>
+          <p className="mt-2 text-[15px] leading-7 text-foreground/90">{HOME_CONTACT.body}</p>
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+            <Button asChild variant="outline">
+              <a href={HOME_CONTACT.telegram.href} target="_blank" rel="noopener noreferrer">
+                <MessageCircle aria-hidden />
+                {HOME_CONTACT.telegram.label}
+              </a>
+            </Button>
+            <Button asChild variant="outline">
+              <a href={HOME_CONTACT.whatsapp.href} target="_blank" rel="noopener noreferrer">
+                <Phone aria-hidden />
+                {HOME_CONTACT.whatsapp.label}
+              </a>
             </Button>
           </div>
         </ContentCard>

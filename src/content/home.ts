@@ -46,3 +46,10 @@ export const HOME_SECTIONS = [
 
 export const SITE_PURPOSE =
   "This site preserves and shares the documented lineage of Faqih Yonis Abdosh’s descendants — the Feqi Yonis family — across generations. Relatives can explore the tree, search by name, and see how they connect. It is a living record meant to keep family history accessible to current and future generations.";
+
+export const HOME_CONTACT = {
+  title: "A note to the family",
+  body: "If something here is wrong, missing, or could be told more clearly, please tell me. I am sorry for any mistakes in this record — I will do my best to correct them. Ideas and support from family are welcome.",
+  telegram: { label: "Telegram @hamdibadosh43", href: "https://t.me/hamdibadosh43" },
+  whatsapp: { label: "WhatsApp +251 931 947 040", href: "https://wa.me/251931947040" },
+} as const;
