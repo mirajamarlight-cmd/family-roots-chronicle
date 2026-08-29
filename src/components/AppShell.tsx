@@ -1,5 +1,14 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { BarChart3, GitCompare, House, Search, Settings, TreeDeciduous, UserPlus } from "lucide-react";
+import {
+  BarChart3,
+  CircleHelp,
+  GitCompare,
+  House,
+  Search,
+  Settings,
+  TreeDeciduous,
+  UserPlus,
+} from "lucide-react";
 import type { ReactNode } from "react";
 
 import { BuiltByRaafat } from "@/components/brand/built-by-raafat";
@@ -72,6 +81,15 @@ export function AppShell({ children, wide }: { children: ReactNode; wide?: boole
           <div className="flex items-center gap-1">
             <AccountNavLink className="gap-1 px-2.5 md:hidden" />
             <Link
+              to="/help"
+              activeProps={{ className: "bg-primary/10 text-primary" }}
+              className={cn(navLinkClass, "px-2 md:hidden")}
+              aria-label="How to use the website"
+              title="Help"
+            >
+              <CircleHelp className="size-4" aria-hidden />
+            </Link>
+            <Link
               to="/admin"
               activeProps={{ className: "bg-primary/10 text-primary" }}
               className={cn(navLinkClass, "px-2 md:hidden")}
@@ -103,6 +121,14 @@ export function AppShell({ children, wide }: { children: ReactNode; wide?: boole
                   {label}
                 </Link>
               ))}
+              <Link
+                to="/help"
+                activeProps={{ className: "bg-primary/10 font-medium text-primary" }}
+                className={navLinkClass}
+              >
+                <CircleHelp className="size-4" aria-hidden />
+                Help
+              </Link>
               <AccountNavLink />
               <Link
                 to="/admin"

@@ -28,7 +28,7 @@ function person(
 }
 
 function link(parent_id: string, child_id: string): Link {
-  return { id: `${parent_id}-${child_id}`, parent_id, child_id, relationship_type: "biological" };
+  return { id: `${parent_id}-${child_id}`, parent_id, child_id, relationship_type: "biological", child_order: null };
 }
 
 /** ponytail: minimal graph builder — avoids pulling supabase via family.ts */
@@ -118,7 +118,7 @@ const ahmedOnly = testGraph(
 );
 expectName("male missing grandfather falls back to stored", ahmedOnly, "ahmed", "Ahmed Yonis");
 
-// --- Scenario 3: female → always stored / manual full name ---
+// --- Scenario 3: female takes her father's and grandfather's names ---
 const fatuma = testGraph(
   [
     person("yonis", "Yonis", { gender: "male" }),
@@ -126,14 +126,18 @@ const fatuma = testGraph(
     person("abdosh", "Abdosh", { gender: "male" }),
     person("fatuma", "Fatuma", {
       gender: "female",
-      middle: "Alem",
-      last: "Hailu",
-      display_name: "Fatuma Alem Hailu",
     }),
+    person("daughter", "Hana", { gender: "female", display_name: "Hana Musa Ali" }),
   ],
-  [link("yonis", "ahmed"), link("ahmed", "abdosh"), link("abdosh", "fatuma")],
+  [
+    link("yonis", "ahmed"),
+    link("ahmed", "abdosh"),
+    link("abdosh", "fatuma"),
+    link("fatuma", "daughter"),
+  ],
 );
-expectName("female ignores patronymic chain", fatuma, "fatuma", "Fatuma Alem Hailu");
+expectName("female uses her paternal chain", fatuma, "fatuma", "Fatuma Abdosh Ahmed");
+expectName("child does not inherit through mother", fatuma, "daughter", "Hana Musa Ali");
 
 // --- Scenario 4: father not in root tree → manual name ---
 const marriedIn = testGraph(

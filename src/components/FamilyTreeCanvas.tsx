@@ -17,7 +17,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { PersonAvatarBadge } from "@/components/person-identity";
 import { cn } from "@/lib/utils";
-import { duplicateEffectiveNames, effectiveDisplayName, personContextLabel, type FamilyGraph } from "@/lib/family";
+import { duplicateEffectiveNames, personContextLabel, type FamilyGraph } from "@/lib/family";
 import { branchColor } from "@/lib/colors";
 import type { FilterVisibility } from "@/lib/tree-filters";
 
@@ -225,7 +225,7 @@ function buildFlow(
       type: "person",
       position: { x, y: depth * V_GAP },
       data: {
-        label: person ? effectiveDisplayName(graph, id) : "Unknown",
+        label: person?.first_name ?? "Unknown",
         contextLabel: person ? personContextLabel(graph, id, duplicateNames) : null,
         childCount: allChildren.length,
         hiddenChildren: allChildren.length > 0 && !expanded.has(id),

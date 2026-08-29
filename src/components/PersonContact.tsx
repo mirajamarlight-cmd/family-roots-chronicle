@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { Mail, MapPin, Phone } from "lucide-react";
+import { MapPin } from "lucide-react";
 
+import { ContactLinks } from "@/components/ContactLinks";
 import { supabase } from "@/integrations/supabase/client";
 
 export function PersonContact({ personId, className }: { personId: string; className?: string }) {
@@ -27,22 +28,7 @@ export function PersonContact({ personId, className }: { personId: string; class
           <span>{data.address}</span>
         </p>
       )}
-      {data.phone && (
-        <p className="flex items-center gap-2 text-sm">
-          <Phone className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-          <a href={`tel:${data.phone}`} className="underline-offset-2 hover:underline">
-            {data.phone}
-          </a>
-        </p>
-      )}
-      {data.email && (
-        <p className="flex items-center gap-2 text-sm">
-          <Mail className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-          <a href={`mailto:${data.email}`} className="break-all underline-offset-2 hover:underline">
-            {data.email}
-          </a>
-        </p>
-      )}
+      <ContactLinks phone={data.phone} email={data.email} />
     </section>
   );
 }

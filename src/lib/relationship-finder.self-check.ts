@@ -21,7 +21,7 @@ function person(id: string, display_name: string, gender: string | null = null):
 }
 
 function link(parent_id: string, child_id: string): Link {
-  return { id: `${parent_id}-${child_id}`, parent_id, child_id, relationship_type: "biological" };
+  return { id: `${parent_id}-${child_id}`, parent_id, child_id, relationship_type: "biological", child_order: null };
 }
 
 /** ponytail: minimal graph builder for self-check only — avoids pulling supabase via family.ts */

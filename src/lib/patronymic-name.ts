@@ -34,8 +34,9 @@ function parentTowardRoot(graph: FamilyGraph, id: string): string | undefined {
 }
 
 /**
- * Male patronymic from paternal father + grandfather in the root tree
- * (e.g. Abdulhamid Teweleda Abdosh). Everyone else keeps stored display_name.
+ * Patronymic from father + grandfather in the root tree
+ * (e.g. Abdulhamid Teweleda Abdosh). A mother may use her own paternal
+ * names, but her children never inherit names through her.
  */
 export function effectiveDisplayName(graph: FamilyGraph, id: string): string {
   const person = graph.byId.get(id);
@@ -43,8 +44,6 @@ export function effectiveDisplayName(graph: FamilyGraph, id: string): string {
 
   const rootId = canonicalRootId(graph);
   if (id === rootId) return person.first_name;
-
-  if ((person.gender ?? "").toLowerCase() === "female") return storedDisplayName(person);
 
   const fatherId = parentTowardRoot(graph, id);
   if (!fatherId) return storedDisplayName(person);
@@ -88,8 +87,7 @@ export function hasPatronymicFatherChain(graph: FamilyGraph, fatherId: string): 
 }
 
 export function personHasPatronymicChain(graph: FamilyGraph, personId: string): boolean {
-  const person = graph.byId.get(personId);
-  if (!person || (person.gender ?? "").toLowerCase() === "female") return false;
+  if (!graph.byId.has(personId)) return false;
   const fatherId = parentTowardRoot(graph, personId);
   return !!fatherId && hasPatronymicFatherChain(graph, fatherId);
 }

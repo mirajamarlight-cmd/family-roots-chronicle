@@ -15,7 +15,7 @@ import {
   type FamilyGraph,
   type Person,
 } from "@/lib/family";
-import { cn, formatRecordDate } from "@/lib/utils";
+import { cn, birthBadgeLabel, deathBadgeLabel } from "@/lib/utils";
 
 function Names({
   graph,
@@ -90,8 +90,8 @@ function PanelBody({
 
       <div className="flex flex-wrap gap-1.5">
         {person.gender && <Badge variant="secondary">{person.gender}</Badge>}
-        {person.birth_date && <Badge variant="outline">b. {formatRecordDate(person.birth_date)}</Badge>}
-        {person.death_date && <Badge variant="outline">d. {formatRecordDate(person.death_date)}</Badge>}
+        {person.birth_date && <Badge variant="outline">{birthBadgeLabel(person.birth_date, person.death_date)}</Badge>}
+        {person.death_date && <Badge variant="outline">{deathBadgeLabel(person.death_date)}</Badge>}
       </div>
 
       {branchId && (

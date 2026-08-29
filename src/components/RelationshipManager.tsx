@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { RelationshipPersonPicker } from "@/components/RelationshipPersonPicker";
@@ -10,6 +10,7 @@ import {
   addParentChild,
   addSibling,
   removeParentChild,
+  setChildOrder,
   validateParentChild,
   validateSibling,
 } from "@/lib/relationships";
@@ -69,6 +70,15 @@ export function RelationshipManager({
   const detach = (parentId: string, childId: string) =>
     run(() => removeParentChild(parentId, childId), "Link removed");
 
+  const moveChild = (childId: string, direction: -1 | 1) => {
+    const ids = [...children];
+    const index = ids.indexOf(childId);
+    const next = index + direction;
+    if (index < 0 || next < 0 || next >= ids.length) return;
+    [ids[index], ids[next]] = [ids[next], ids[index]];
+    void run(() => setChildOrder(person.id, ids), "Birth order updated");
+  };
+
   if (!person) return null;
 
   return (
@@ -113,19 +123,44 @@ export function RelationshipManager({
 
       <section className="space-y-2">
         <h4 className="text-sm font-medium">Children ({children.length})</h4>
+        <p className="text-xs text-muted-foreground">
+          Order by birthday when known; otherwise use arrows to set birth order.
+        </p>
         <ul className="space-y-1">
-          {children.map((id) => (
+          {children.map((id, index) => (
             <li key={id} className="flex items-center justify-between gap-2 text-sm">
-              <span>{effectiveDisplayName(graph, id)}</span>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="size-8"
-                aria-label="Remove child link"
-                onClick={() => detach(person.id, id)}
-              >
-                <Trash2 className="size-4" />
-              </Button>
+              <span className="min-w-0 truncate">{effectiveDisplayName(graph, id)}</span>
+              <div className="flex shrink-0 items-center gap-0.5">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-8"
+                  aria-label="Move earlier in birth order"
+                  disabled={index === 0}
+                  onClick={() => moveChild(id, -1)}
+                >
+                  <ChevronUp className="size-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-8"
+                  aria-label="Move later in birth order"
+                  disabled={index === children.length - 1}
+                  onClick={() => moveChild(id, 1)}
+                >
+                  <ChevronDown className="size-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-8"
+                  aria-label="Remove child link"
+                  onClick={() => detach(person.id, id)}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
             </li>
           ))}
           {children.length === 0 && (

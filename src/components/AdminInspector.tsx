@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { useEffect, useRef } from "react";
 
+import { DualDateField } from "@/components/DualDateField";
 import { PersonAvatarBadge } from "@/components/person-identity";
 import { PersonContact } from "@/components/PersonContact";
 import { RelationshipManager } from "@/components/RelationshipManager";
@@ -57,8 +58,8 @@ const NAME_FIELDS = [
 ] as const;
 
 const DATE_FIELDS = [
-  ["birth_date", "Birth date", "date"],
-  ["death_date", "Death date", "date"],
+  ["birth_date", "Birth date"],
+  ["death_date", "Death date"],
 ] as const;
 
 function InspectorBody({
@@ -155,16 +156,14 @@ function InspectorBody({
             <option value="female">Female</option>
           </select>
         </div>
-        {DATE_FIELDS.map(([key, label, type]) => (
-          <div key={key} className="space-y-1.5">
-            <Label htmlFor={key}>{label}</Label>
-            <Input
-              id={key}
-              type={type}
-              value={draft[key]}
-              onChange={(e) => onDraftChange({ ...draft, [key]: e.target.value })}
-            />
-          </div>
+        {DATE_FIELDS.map(([key, label]) => (
+          <DualDateField
+            key={key}
+            id={key}
+            label={label}
+            value={draft[key]}
+            onChange={(iso) => onDraftChange({ ...draft, [key]: iso })}
+          />
         ))}
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="notes">Notes</Label>

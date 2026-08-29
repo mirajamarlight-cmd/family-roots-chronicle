@@ -59,6 +59,7 @@ export type Database = {
       parent_child: {
         Row: {
           child_id: string
+          child_order: number | null
           created_at: string
           id: string
           parent_id: string
@@ -66,6 +67,7 @@ export type Database = {
         }
         Insert: {
           child_id: string
+          child_order?: number | null
           created_at?: string
           id?: string
           parent_id: string
@@ -73,6 +75,7 @@ export type Database = {
         }
         Update: {
           child_id?: string
+          child_order?: number | null
           created_at?: string
           id?: string
           parent_id?: string

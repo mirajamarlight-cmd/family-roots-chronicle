@@ -15,7 +15,13 @@ export type Person = {
   notes: string | null;
 };
 
-export type Link = { id: string; parent_id: string; child_id: string; relationship_type: string };
+export type Link = {
+  id: string;
+  parent_id: string;
+  child_id: string;
+  relationship_type: string;
+  child_order: number | null;
+};
 export type Marriage = {
   id: string;
   person1_id: string;
@@ -45,7 +51,7 @@ const PERSON_COLUMNS =
 export async function fetchFamilyGraph(): Promise<FamilyGraph> {
   const [peopleRes, linkRes] = await Promise.all([
     supabase.from("people").select(PERSON_COLUMNS).order("display_name"),
-    supabase.from("parent_child").select("id, parent_id, child_id, relationship_type"),
+    supabase.from("parent_child").select("id, parent_id, child_id, relationship_type, child_order"),
   ]);
   if (peopleRes.error) throw peopleRes.error;
   if (linkRes.error) throw linkRes.error;
@@ -60,8 +66,12 @@ export function buildGraph(people: Person[], links: Link[], marriages: Marriage[
   const parentsOf = new Map<string, string[]>();
   const spousesOf = new Map<string, string[]>();
 
+  const linkKey = (parentId: string, childId: string) => `${parentId}:${childId}`;
+  const linkByParentChild = new Map<string, Link>();
+
   for (const l of links) {
     if (!byId.has(l.parent_id) || !byId.has(l.child_id)) continue;
+    linkByParentChild.set(linkKey(l.parent_id, l.child_id), l);
     (childrenOf.get(l.parent_id) ?? childrenOf.set(l.parent_id, []).get(l.parent_id)!).push(
       l.child_id,
     );
@@ -76,10 +86,28 @@ export function buildGraph(people: Person[], links: Link[], marriages: Marriage[
     );
   }
 
-  const sortByName = (ids: string[], g: FamilyGraph) =>
-    ids.sort((a, b) =>
-      effectiveDisplayName(g, a).localeCompare(effectiveDisplayName(g, b)),
-    );
+  const compareChildren = (parentId: string, a: string, b: string, g: FamilyGraph) => {
+    const personA = g.byId.get(a);
+    const personB = g.byId.get(b);
+    const birthA = personA?.birth_date;
+    const birthB = personB?.birth_date;
+    if (birthA && birthB) {
+      const byBirth = birthA.localeCompare(birthB);
+      if (byBirth !== 0) return byBirth;
+    } else if (birthA && !birthB) return -1;
+    else if (!birthA && birthB) return 1;
+
+    const orderA = linkByParentChild.get(linkKey(parentId, a))?.child_order;
+    const orderB = linkByParentChild.get(linkKey(parentId, b))?.child_order;
+    if (orderA != null && orderB != null && orderA !== orderB) return orderA - orderB;
+    if (orderA != null && orderB == null) return -1;
+    if (orderA == null && orderB != null) return 1;
+
+    return effectiveDisplayName(g, a).localeCompare(effectiveDisplayName(g, b));
+  };
+
+  const sortChildren = (parentId: string, ids: string[], g: FamilyGraph) =>
+    ids.sort((a, b) => compareChildren(parentId, a, b, g));
 
   const roots = people.filter((p) => !parentsOf.has(p.id)).map((p) => p.id);
 
@@ -118,7 +146,7 @@ export function buildGraph(people: Person[], links: Link[], marriages: Marriage[
     depthOf,
     branchOf,
   };
-  childrenOf.forEach((ids) => sortByName(ids, graph));
+  childrenOf.forEach((ids, parentId) => sortChildren(parentId, ids, graph));
 
   return graph;
 }

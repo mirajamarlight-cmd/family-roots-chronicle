@@ -104,6 +104,19 @@ export async function removeParentChild(parentId: string, childId: string) {
   if (error) throw error;
 }
 
+export async function setChildOrder(parentId: string, orderedChildIds: string[]) {
+  const updates = orderedChildIds.map((childId, index) =>
+    supabase
+      .from("parent_child")
+      .update({ child_order: index })
+      .eq("parent_id", parentId)
+      .eq("child_id", childId),
+  );
+  const results = await Promise.all(updates);
+  const failed = results.find((r) => r.error);
+  if (failed?.error) throw failed.error;
+}
+
 export async function addSibling(graph: FamilyGraph, personId: string, siblingId: string) {
   const parents = graph.parentsOf.get(personId) ?? [];
   for (const parentId of parents) {

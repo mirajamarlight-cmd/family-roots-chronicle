@@ -2,6 +2,7 @@ import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { FamilyPlace } from "@/components/family-place";
+import { DualDateField } from "@/components/DualDateField";
 import { PersonAvatarBadge } from "@/components/person-identity";
 import { RelationshipPersonPicker } from "@/components/RelationshipPersonPicker";
 import { Button } from "@/components/ui/button";
@@ -106,22 +107,18 @@ function AddedPersonFields({
             onChange={(e) => onChange({ last_name: e.target.value })}
           />
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor={`${prefix}-birth`}>Birthday</Label>
-          <Input
-            id={`${prefix}-birth`}
-            type="date"
-            value={birth}
-            onChange={(e) => onChange({ birth_date: e.target.value })}
-          />
-        </div>
-        <div className="space-y-1.5 sm:col-span-2">
-          <Label htmlFor={`${prefix}-death`}>Death date — if they have passed</Label>
-          <Input
+        <DualDateField
+          id={`${prefix}-birth`}
+          label="Birthday"
+          value={birth}
+          onChange={(iso) => onChange({ birth_date: iso })}
+        />
+        <div className="sm:col-span-2">
+          <DualDateField
             id={`${prefix}-death`}
-            type="date"
+            label="Death date — if they have passed"
             value={death}
-            onChange={(e) => onChange({ death_date: e.target.value })}
+            onChange={(iso) => onChange({ death_date: iso })}
           />
         </div>
       </div>
@@ -485,19 +482,13 @@ export function JoinRecordForm({
               <span className="font-medium text-foreground">{patronymicPreview}</span>.
             </p>
           )}
-          <div className="space-y-1.5">
-            <Label htmlFor="birth_date">
-              Birthday <span className="text-muted-foreground">*</span>
-            </Label>
-            <Input
-              id="birth_date"
-              name="bday"
-              type="date"
-              required
-              value={draft.birth_date}
-              onChange={(e) => onChange({ ...draft, birth_date: e.target.value })}
-            />
-          </div>
+          <DualDateField
+            id="birth_date"
+            label="Birthday *"
+            value={draft.birth_date}
+            onChange={(iso) => onChange({ ...draft, birth_date: iso })}
+            className="sm:col-span-2"
+          />
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="address">
               Address <span className="text-muted-foreground">*</span>

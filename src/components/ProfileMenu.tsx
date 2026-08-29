@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, LogOut, MapPin, Pencil, Phone, TreeDeciduous, User } from "lucide-react";
+import { ChevronDown, LogOut, MapPin, Pencil, TreeDeciduous, User } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 
+import { ContactLinks } from "@/components/ContactLinks";
 import { JoinRecordForm } from "@/components/JoinRecordForm";
 import { PersonAvatarBadge } from "@/components/person-identity";
 import {
@@ -121,11 +122,8 @@ function ProfileHeader({
               <span className="min-w-0 break-words">{address}</span>
             </p>
           )}
-          {phone && (
-            <p className="flex items-center gap-2 text-xs text-foreground/90">
-              <Phone className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-              {phone}
-            </p>
+          {(phone || email) && (
+            <ContactLinks phone={phone} email={email} compact className="pt-0.5" />
           )}
         </div>
       )}
