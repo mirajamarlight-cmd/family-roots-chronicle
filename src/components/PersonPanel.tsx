@@ -1,6 +1,7 @@
 import { GitBranch, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 
+import { DeceasedBadge } from "@/components/DeceasedBadge";
 import { PersonAvatarBadge } from "@/components/person-identity";
 import { PersonContact } from "@/components/PersonContact";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,7 @@ import {
   descendantCount,
   effectiveDisplayName,
   lineagePathLabel,
+  personIsDeceased,
   siblingsOf,
   type FamilyGraph,
   type Person,
@@ -63,6 +65,7 @@ function PanelBody({
   const siblings = siblingsOf(graph, person.id);
   const branchId = branchFocusId(graph, person.id);
   const pathLabel = lineagePathLabel(graph, person.id);
+  const deceased = personIsDeceased(person);
 
   return (
     <>
@@ -89,9 +92,16 @@ function PanelBody({
       )}
 
       <div className="flex flex-wrap gap-1.5">
+        {deceased && <DeceasedBadge />}
         {person.gender && <Badge variant="secondary">{person.gender}</Badge>}
-        {person.birth_date && <Badge variant="outline">{birthBadgeLabel(person.birth_date, person.death_date)}</Badge>}
-        {person.death_date && <Badge variant="outline">{deathBadgeLabel(person.death_date)}</Badge>}
+        {person.birth_date && (
+          <Badge variant="outline">
+            {birthBadgeLabel(person.birth_date, person.death_date, deceased)}
+          </Badge>
+        )}
+        {deceased && person.death_date && (
+          <Badge variant="outline">{deathBadgeLabel(person.death_date)}</Badge>
+        )}
       </div>
 
       {branchId && (

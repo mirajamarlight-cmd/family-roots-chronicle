@@ -15,9 +15,10 @@ import "@xyflow/react/dist/style.css";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
+import { DeceasedBadge } from "@/components/DeceasedBadge";
 import { PersonAvatarBadge } from "@/components/person-identity";
 import { cn } from "@/lib/utils";
-import { duplicateEffectiveNames, personContextLabel, type FamilyGraph } from "@/lib/family";
+import { duplicateEffectiveNames, personContextLabel, personIsDeceased, type FamilyGraph } from "@/lib/family";
 import { branchColor } from "@/lib/colors";
 import type { FilterVisibility } from "@/lib/tree-filters";
 
@@ -38,6 +39,7 @@ export type TreeNodeData = {
   branchKey: string;
   dimmed: boolean;
   matched: boolean;
+  deceased: boolean;
 };
 
 const TreeHandlersContext = createContext<{
@@ -98,6 +100,11 @@ function PersonNode({ id, data }: NodeProps) {
         <span className="block truncate text-center font-display text-base font-semibold leading-tight">
           {d.label}
         </span>
+        {d.deceased && (
+          <span className="mt-1 flex justify-center">
+            <DeceasedBadge compact />
+          </span>
+        )}
         {d.contextLabel && (
           <span className="mt-0.5 block truncate text-center text-[10px] leading-tight text-muted-foreground">
             {d.contextLabel}
@@ -237,6 +244,7 @@ function buildFlow(
         branchKey: graph.branchOf.get(id) ?? person?.display_name ?? id,
         dimmed,
         matched: filters?.selfMatch.has(id) ?? false,
+        deceased: person ? personIsDeceased(person) : false,
       } satisfies TreeNodeData as unknown as Record<string, unknown>,
       draggable: false,
     });

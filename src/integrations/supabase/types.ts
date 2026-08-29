@@ -256,6 +256,7 @@ export type Database = {
           birth_date: string | null
           created_at: string
           death_date: string | null
+          is_deceased: boolean
           display_name: string
           first_name: string
           gender: string | null
@@ -270,6 +271,7 @@ export type Database = {
           birth_date?: string | null
           created_at?: string
           death_date?: string | null
+          is_deceased?: boolean
           display_name: string
           first_name: string
           gender?: string | null
@@ -284,6 +286,7 @@ export type Database = {
           birth_date?: string | null
           created_at?: string
           death_date?: string | null
+          is_deceased?: boolean
           display_name?: string
           first_name?: string
           gender?: string | null

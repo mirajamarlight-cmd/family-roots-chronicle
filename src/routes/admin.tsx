@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { AdminInspector, emptyPersonDraft, personToDraft, type PersonDraft } from "@/components/AdminInspector";
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { useFamilyGraph, useIsAdmin } from "@/hooks/useFamily";
 import { supabase } from "@/integrations/supabase/client";
 import type { Person } from "@/lib/family";
+import { personIsDeceased, updatePersonDeceased } from "@/lib/family";
 import { SITE_NAME } from "@/lib/brand";
 
 export const Route = createFileRoute("/admin")({
@@ -45,6 +46,7 @@ function AdminPage() {
   const [draft, setDraft] = useState<PersonDraft | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectAfterLoad, setSelectAfterLoad] = useState<string | null>(null);
+  const draftDirtyRef = useRef(false);
 
   const openPerson = useCallback(
     (id: string) => {
@@ -52,9 +54,40 @@ function AdminPage() {
       const p = graph.byId.get(id);
       if (!p) return;
       setSelectedId(id);
-      setDraft((prev) => (prev?.id === id ? prev : personToDraft(p)));
+      setDraft((prev) => {
+        if (prev?.id === id && draftDirtyRef.current) return prev;
+        draftDirtyRef.current = false;
+        return personToDraft(p);
+      });
     },
     [graph],
+  );
+
+  const patchDraft = useCallback((next: PersonDraft) => {
+    draftDirtyRef.current = true;
+    setDraft(next);
+  }, []);
+
+  const persistDeceased = useCallback(
+    async (next: PersonDraft) => {
+      patchDraft(next);
+      if (!next.id) return;
+      setBusy(true);
+      const result = await updatePersonDeceased(
+        next.id,
+        next.is_deceased,
+        next.death_date.trim() || null,
+      );
+      setBusy(false);
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+      draftDirtyRef.current = false;
+      toast.success(next.is_deceased ? "Marked as deceased" : "Marked as living");
+      void queryClient.invalidateQueries({ queryKey: ["family-graph"] });
+    },
+    [patchDraft, queryClient],
   );
 
   useEffect(() => {
@@ -74,6 +107,7 @@ function AdminPage() {
       return;
     }
     setBusy(true);
+    const death_date = draft.is_deceased ? draft.death_date.trim() || null : null;
     const payload = {
       first_name: draft.first_name.trim(),
       middle_name: draft.middle_name.trim() || null,
@@ -84,7 +118,7 @@ function AdminPage() {
         .join(" "),
       gender: draft.gender.trim() || null,
       birth_date: draft.birth_date.trim() || null,
-      death_date: draft.death_date.trim() || null,
+      death_date,
       notes: draft.notes.trim() || null,
     };
 
@@ -95,9 +129,25 @@ function AdminPage() {
         toast.error(error.message);
         return;
       }
+      const deceasedResult = await updatePersonDeceased(
+        draft.id,
+        draft.is_deceased,
+        draft.death_date.trim() || null,
+      );
+      if (!deceasedResult.ok) {
+        setBusy(false);
+        toast.error(deceasedResult.message);
+        return;
+      }
       setBusy(false);
+      draftDirtyRef.current = false;
+      setDraft({
+        ...draft,
+        death_date: death_date ?? "",
+        is_deceased: personIsDeceased({ is_deceased: draft.is_deceased, death_date }),
+      });
       toast.success("Saved");
-      queryClient.invalidateQueries({ queryKey: ["family-graph"] });
+      void queryClient.invalidateQueries({ queryKey: ["family-graph"] });
       return;
     }
 
@@ -106,6 +156,18 @@ function AdminPage() {
       setBusy(false);
       toast.error(error?.message ?? "Could not save");
       return;
+    }
+    if (draft.is_deceased) {
+      const deceasedResult = await updatePersonDeceased(
+        data.id,
+        true,
+        draft.death_date.trim() || null,
+      );
+      if (!deceasedResult.ok) {
+        setBusy(false);
+        toast.error(deceasedResult.message);
+        return;
+      }
     }
     if (draft.parent_id) {
       const { error: linkError } = await supabase.from("parent_child").insert({
@@ -240,7 +302,8 @@ function AdminPage() {
             <AdminInspector
               graph={graph}
               draft={draft}
-              onDraftChange={setDraft}
+              onDraftChange={patchDraft}
+              onDeceasedChange={(next) => void persistDeceased(next)}
               onSave={() => void save()}
               onDelete={
                 editing

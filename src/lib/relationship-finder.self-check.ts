@@ -15,6 +15,7 @@ function person(id: string, display_name: string, gender: string | null = null):
     gender,
     birth_date: null,
     death_date: null,
+    is_deceased: false,
     photo_url: null,
     notes: null,
   };

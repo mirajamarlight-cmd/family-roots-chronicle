@@ -11,6 +11,7 @@ export type Person = {
   gender: string | null;
   birth_date: string | null;
   death_date: string | null;
+  is_deceased: boolean;
   photo_url: string | null;
   notes: string | null;
 };
@@ -45,23 +46,71 @@ export type FamilyGraph = {
   branchOf: Map<string, string | null>;
 };
 
-const PERSON_COLUMNS =
+export function personIsDeceased(p: Pick<Person, "is_deceased" | "death_date">): boolean {
+  return p.is_deceased || !!p.death_date;
+}
+
+export const DECEASED_PHRASE = "إِنَّا لِلَّهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ";
+export const DECEASED_LABEL = "رَحِمَهُ اللَّه";
+
+const PERSON_BASE_COLUMNS =
   "id, first_name, middle_name, last_name, display_name, gender, birth_date, death_date, photo_url, notes";
 
+async function fetchPeople() {
+  const withFlag = await supabase
+    .from("people")
+    .select(`${PERSON_BASE_COLUMNS}, is_deceased`)
+    .order("display_name");
+  if (!withFlag.error) return (withFlag.data ?? []) as Person[];
+
+  const msg = withFlag.error.message ?? "";
+  if (!msg.includes("is_deceased")) throw withFlag.error;
+
+  const base = await supabase.from("people").select(PERSON_BASE_COLUMNS).order("display_name");
+  if (base.error) throw base.error;
+  return ((base.data ?? []) as Omit<Person, "is_deceased">[]).map((p) => ({
+    ...p,
+    is_deceased: false,
+  }));
+}
+
+export async function updatePersonDeceased(
+  id: string,
+  isDeceased: boolean,
+  deathDate: string | null,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const death_date = isDeceased ? deathDate : null;
+  const withFlag = await supabase.from("people").update({ is_deceased: isDeceased, death_date }).eq("id", id);
+  if (!withFlag.error) return { ok: true };
+
+  const msg = withFlag.error.message ?? "";
+  if (!msg.includes("is_deceased")) return { ok: false, message: msg };
+
+  if (isDeceased && !death_date) {
+    return {
+      ok: false,
+      message: "Add a death date, or run the is_deceased migration in Supabase SQL editor.",
+    };
+  }
+
+  const base = await supabase.from("people").update({ death_date }).eq("id", id);
+  if (base.error) return { ok: false, message: base.error.message };
+  return { ok: true };
+}
+
 export async function fetchFamilyGraph(): Promise<FamilyGraph> {
-  const [peopleRes, linkRes] = await Promise.all([
-    supabase.from("people").select(PERSON_COLUMNS).order("display_name"),
+  const [people, linkRes] = await Promise.all([
+    fetchPeople(),
     supabase.from("parent_child").select("id, parent_id, child_id, relationship_type, child_order"),
   ]);
-  if (peopleRes.error) throw peopleRes.error;
   if (linkRes.error) throw linkRes.error;
 
-  // ponytail: marriages table stays in DB for later; V1 UI omits spouse data entirely.
-  return buildGraph((peopleRes.data ?? []) as Person[], (linkRes.data ?? []) as Link[], []);
+  return buildGraph(people, (linkRes.data ?? []) as Link[], []);
 }
 
 export function buildGraph(people: Person[], links: Link[], marriages: Marriage[]): FamilyGraph {
-  const byId = new Map(people.map((p) => [p.id, p]));
+  const normalized = people.map((p) => ({ ...p, is_deceased: personIsDeceased(p) }));
+  const byId = new Map(normalized.map((p) => [p.id, p]));
   const childrenOf = new Map<string, string[]>();
   const parentsOf = new Map<string, string[]>();
   const spousesOf = new Map<string, string[]>();
@@ -109,7 +158,7 @@ export function buildGraph(people: Person[], links: Link[], marriages: Marriage[
   const sortChildren = (parentId: string, ids: string[], g: FamilyGraph) =>
     ids.sort((a, b) => compareChildren(parentId, a, b, g));
 
-  const roots = people.filter((p) => !parentsOf.has(p.id)).map((p) => p.id);
+  const roots = normalized.filter((p) => !parentsOf.has(p.id)).map((p) => p.id);
 
   const canonicalRoot =
     roots.find((id) => byId.get(id)?.display_name === "Yonis") ?? roots[0] ?? null;
@@ -132,10 +181,10 @@ export function buildGraph(people: Person[], links: Link[], marriages: Marriage[
     }
   }
   // people not reachable from canonical root (shouldn't happen, but be safe)
-  for (const p of people) if (!depthOf.has(p.id)) depthOf.set(p.id, 0);
+  for (const p of normalized) if (!depthOf.has(p.id)) depthOf.set(p.id, 0);
 
   const graph: FamilyGraph = {
-    people,
+    people: normalized,
     byId,
     childrenOf,
     parentsOf,

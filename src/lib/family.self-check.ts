@@ -22,6 +22,7 @@ function person(
     gender: opts.gender ?? null,
     birth_date: null,
     death_date: null,
+    is_deceased: false,
     photo_url: null,
     notes: null,
   };

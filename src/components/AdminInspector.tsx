@@ -8,9 +8,10 @@ import { RelationshipManager } from "@/components/RelationshipManager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { descendantCount, type FamilyGraph, type Person } from "@/lib/family";
+import { descendantCount, personIsDeceased, type FamilyGraph, type Person } from "@/lib/family";
 import { cn } from "@/lib/utils";
 
 export type PersonDraft = {
@@ -21,6 +22,7 @@ export type PersonDraft = {
   gender: string;
   birth_date: string;
   death_date: string;
+  is_deceased: boolean;
   notes: string;
   parent_id: string;
 };
@@ -32,6 +34,7 @@ export const emptyPersonDraft: PersonDraft = {
   gender: "",
   birth_date: "",
   death_date: "",
+  is_deceased: false,
   notes: "",
   parent_id: "",
 };
@@ -46,6 +49,7 @@ export function personToDraft(p: Person): PersonDraft {
     gender: gender === "male" || gender === "female" ? gender : "",
     birth_date: p.birth_date ?? "",
     death_date: p.death_date ?? "",
+    is_deceased: personIsDeceased(p),
     notes: p.notes ?? "",
     parent_id: "",
   };
@@ -57,15 +61,13 @@ const NAME_FIELDS = [
   ["last_name", "Last name", "text"],
 ] as const;
 
-const DATE_FIELDS = [
-  ["birth_date", "Birth date"],
-  ["death_date", "Death date"],
-] as const;
+const DATE_FIELDS = [["birth_date", "Birth date"]] as const;
 
 function InspectorBody({
   graph,
   draft,
   onDraftChange,
+  onDeceasedChange,
   onSave,
   onDelete,
   onClose,
@@ -75,6 +77,7 @@ function InspectorBody({
   graph: FamilyGraph;
   draft: PersonDraft;
   onDraftChange: (draft: PersonDraft) => void;
+  onDeceasedChange: (draft: PersonDraft) => void;
   onSave: () => void;
   onDelete: (() => void) | undefined;
   onClose: () => void;
@@ -165,6 +168,36 @@ function InspectorBody({
             onChange={(iso) => onDraftChange({ ...draft, [key]: iso })}
           />
         ))}
+        <div className="flex items-center justify-between gap-3 sm:col-span-2">
+          <div className="space-y-0.5">
+            <Label htmlFor="is_deceased">Deceased</Label>
+            <p className="text-xs text-muted-foreground">
+              {draft.is_deceased ? "Marked as no longer living" : "Marked as living"}
+            </p>
+          </div>
+          <Switch
+            id="is_deceased"
+            checked={draft.is_deceased}
+            disabled={busy}
+            onCheckedChange={(deceased) =>
+              onDeceasedChange({
+                ...draft,
+                is_deceased: deceased,
+                death_date: deceased ? draft.death_date : "",
+              })
+            }
+            aria-label={draft.is_deceased ? "Mark as living" : "Mark as deceased"}
+          />
+        </div>
+        {draft.is_deceased && (
+          <DualDateField
+            id="death_date"
+            label="Death date"
+            value={draft.death_date}
+            onChange={(iso) => onDraftChange({ ...draft, death_date: iso })}
+            className="sm:col-span-2"
+          />
+        )}
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="notes">Notes</Label>
           <Textarea
@@ -197,6 +230,7 @@ export function AdminInspector({
   graph,
   draft,
   onDraftChange,
+  onDeceasedChange,
   onSave,
   onDelete,
   onClose,
@@ -205,6 +239,7 @@ export function AdminInspector({
   graph: FamilyGraph;
   draft: PersonDraft;
   onDraftChange: (draft: PersonDraft) => void;
+  onDeceasedChange: (draft: PersonDraft) => void;
   onSave: () => void;
   onDelete: (() => void) | undefined;
   onClose: () => void;
@@ -230,6 +265,7 @@ export function AdminInspector({
       graph={graph}
       draft={draft}
       onDraftChange={onDraftChange}
+      onDeceasedChange={onDeceasedChange}
       onSave={onSave}
       onDelete={onDelete}
       onClose={onClose}

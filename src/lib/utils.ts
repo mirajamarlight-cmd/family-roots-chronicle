@@ -46,10 +46,15 @@ export function formatRecordDateWithEc(value: string | null | undefined): string
   return ec ? `${g} · ${ec}` : g;
 }
 
-export function birthBadgeLabel(birthDate: string | null, deathDate: string | null): string | null {
+export function birthBadgeLabel(
+  birthDate: string | null,
+  deathDate: string | null,
+  deceased = false,
+): string | null {
   if (!birthDate) return null;
-  const age = personAgeYears(birthDate, deathDate);
   const date = formatRecordDateWithEc(birthDate);
+  if (deceased && !deathDate) return `b. ${date}`;
+  const age = personAgeYears(birthDate, deathDate);
   if (deathDate && age !== null) return `b. ${date} (aged ${age})`;
   if (age !== null) return `b. ${date} (${age})`;
   return `b. ${date}`;
