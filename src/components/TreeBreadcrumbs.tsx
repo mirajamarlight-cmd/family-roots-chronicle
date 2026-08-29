@@ -32,11 +32,11 @@ export function TreeBreadcrumbs({
               {index > 0 && <BreadcrumbSeparator />}
               <BreadcrumbItem className="shrink-0">
                 {isLast ? (
-                  <BreadcrumbPage>{person.display_name}</BreadcrumbPage>
+                  <BreadcrumbPage>{person.first_name}</BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink asChild>
                     <button type="button" onClick={() => onFocus(person.id)}>
-                      {person.display_name}
+                      {person.first_name}
                     </button>
                   </BreadcrumbLink>
                 )}

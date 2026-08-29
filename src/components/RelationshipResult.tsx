@@ -5,7 +5,7 @@ import { ContentCard } from "@/components/ContentCard";
 import { PersonAvatarBadge } from "@/components/person-identity";
 import { RelationshipTreeView } from "@/components/RelationshipTreeView";
 import { Button } from "@/components/ui/button";
-import type { FamilyGraph } from "@/lib/family";
+import { effectiveDisplayName, type FamilyGraph } from "@/lib/family";
 import {
   formatRelationshipSentence,
   formatRelationshipStory,
@@ -19,7 +19,7 @@ function StoryLine({ graph, spans }: { graph: FamilyGraph; spans: StorySpan[] })
     <p className="text-sm leading-relaxed">
       {spans.map((span, i) => {
         if ("t" in span) return <span key={i}>{span.t}</span>;
-        const name = graph.byId.get(span.id)?.display_name ?? "Unknown";
+        const name = effectiveDisplayName(graph, span.id);
         return (
           <Link
             key={`${span.id}-${i}`}
@@ -55,14 +55,14 @@ export function RelationshipResultCard({
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
           <div className="flex flex-col items-center gap-2 text-center">
             <PersonAvatarBadge graph={graph} personId={personA.id} size="lg" showBadge={false} />
-            <span className="font-medium">{personA.display_name}</span>
+            <span className="font-medium">{effectiveDisplayName(graph, personA.id)}</span>
           </div>
           <span className="text-sm text-muted-foreground" aria-hidden>
             ↔
           </span>
           <div className="flex flex-col items-center gap-2 text-center">
             <PersonAvatarBadge graph={graph} personId={personB.id} size="lg" showBadge={false} />
-            <span className="font-medium">{personB.display_name}</span>
+            <span className="font-medium">{effectiveDisplayName(graph, personB.id)}</span>
           </div>
         </div>
       )}
@@ -98,13 +98,13 @@ export function RelationshipResultCard({
           <Button variant="outline" asChild className="gap-2">
             <Link to="/tree" search={{ person: personA.id, root: graph.branchOf.get(personA.id) ?? undefined }}>
               <GitBranch className="size-4" aria-hidden />
-              {personA.display_name}&apos;s branch
+              {effectiveDisplayName(graph, personA.id)}&apos;s branch
             </Link>
           </Button>
           <Button variant="outline" asChild className="gap-2">
             <Link to="/tree" search={{ person: personB.id, root: graph.branchOf.get(personB.id) ?? undefined }}>
               <GitBranch className="size-4" aria-hidden />
-              {personB.display_name}&apos;s branch
+              {effectiveDisplayName(graph, personB.id)}&apos;s branch
             </Link>
           </Button>
         </div>

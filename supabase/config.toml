@@ -1,1 +1,10 @@
 project_id = "auyffyxnpkipgmysljwk"
+
+[auth]
+# Supabase's supported minimum. No uppercase, digit, or symbol requirement.
+minimum_password_length = 6
+password_requirements = ""
+
+[auth.email]
+# New accounts can sign in immediately; no verification email is sent.
+enable_confirmations = false

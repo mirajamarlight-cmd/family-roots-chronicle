@@ -37,7 +37,7 @@ export const Route = createFileRoute("/admin")({
 });
 
 function AdminPage() {
-  const { isAdmin, userId, email, loading, refetch } = useIsAdmin();
+  const { isAdmin, userId, email, loading } = useIsAdmin();
   const { data: graph, isLoading: graphLoading } = useFamilyGraph();
   const queryClient = useQueryClient();
 
@@ -45,15 +45,6 @@ function AdminPage() {
   const [draft, setDraft] = useState<PersonDraft | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectAfterLoad, setSelectAfterLoad] = useState<string | null>(null);
-
-  const claimAdmin = async () => {
-    const { error } = await supabase.rpc("claim_admin");
-    if (error) toast.error(error.message);
-    else {
-      toast.success("You are now an admin");
-      refetch();
-    }
-  };
 
   const openPerson = useCallback(
     (id: string) => {
@@ -190,14 +181,11 @@ function AdminPage() {
         <div className="mx-auto max-w-md space-y-4 text-center">
           <PageHeader
             title="No admin access"
-            description={`Signed in as ${email}. If you are adding yourself to the tree, use Join. If you are the family record keeper and no admin exists yet, you can claim the role.`}
+            description={`Signed in as ${email}. Admin access must be granted by the family record keeper.`}
           />
           <div className="flex flex-wrap justify-center gap-2">
             <Button asChild>
               <Link to="/join">Add yourself</Link>
-            </Button>
-            <Button variant="outline" onClick={claimAdmin}>
-              Claim admin role
             </Button>
             <Button variant="outline" onClick={() => supabase.auth.signOut()}>
               Sign out

@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "check:relationship": "node --experimental-strip-types src/lib/relationship-finder.self-check.ts",
-    "check:submissions": "node --experimental-strip-types src/lib/submissions.self-check.ts"
+    "check:submissions": "node --experimental-strip-types src/lib/submissions.self-check.ts",
+    "check:family": "node --experimental-strip-types src/lib/family.self-check.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

@@ -2,7 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
 import { FamilyTreeCanvas } from "@/components/FamilyTreeCanvas";
-import type { FamilyGraph } from "@/lib/family";
+import { effectiveDisplayName, type FamilyGraph } from "@/lib/family";
 import {
   buildRelationshipTreeView,
   formatRelationshipBridge,
@@ -42,7 +42,7 @@ export function RelationshipTreeView({
     });
   };
 
-  const lcaName = graph.byId.get(view.rootId)?.display_name ?? "Common ancestor";
+  const lcaName = effectiveDisplayName(graph, view.rootId);
 
   return (
     <div

@@ -1,12 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
-import { submissionProblem, type SubmissionDraft } from "./submission-draft";
+import { submissionProblem, type SubmissionDraft, type SubmissionContext } from "./submission-draft";
 
 export type PersonSubmission = Tables<"person_submissions">;
 export type PersonClaim = Tables<"person_claims">;
-export type { LinkSide, SubmissionDraft, SubmissionKind } from "./submission-draft";
-export { emptyDraft, submissionProblem } from "./submission-draft";
+
+export async function fetchPersonClaimIndex(): Promise<Map<string, string>> {
+  const { data, error } = await supabase.rpc("person_claim_index");
+  if (error) throw error;
+  return new Map((data ?? []).map((row) => [row.person_id, row.user_id]));
+}
 
 export async function fetchJoinState(userId: string) {
   const [pendingRes, claimRes] = await Promise.all([
@@ -23,8 +27,19 @@ export async function fetchJoinState(userId: string) {
   return { pending: pendingRes.data, claim: claimRes.data };
 }
 
-export async function submitRecord(userId: string, d: SubmissionDraft, existingParentCount = 0) {
-  const problem = submissionProblem(d, existingParentCount);
+export type { LinkSide, SubmissionContext, SubmissionDraft, SubmissionKind } from "./submission-draft";
+export { emptyDraft, personClaimedByOther, submissionProblem } from "./submission-draft";
+
+export async function submitRecord(
+  userId: string,
+  d: SubmissionDraft,
+  existingParentCount = 0,
+  ctx?: SubmissionContext,
+) {
+  const problem = submissionProblem(d, existingParentCount, {
+    userId,
+    claimsByPerson: ctx?.claimsByPerson,
+  });
   if (problem) throw new Error(problem);
   const addingLink = d.parent_source === "add";
   const addingOther = d.other_source === "add";
@@ -62,6 +77,12 @@ export async function submitRecord(userId: string, d: SubmissionDraft, existingP
           ? "Someone else is already waiting for approval on that person."
           : "You already have a submission waiting for approval.",
       );
+    }
+    if (error.message.includes("already linked to another account")) {
+      throw new Error("That person is already linked to another account.");
+    }
+    if (error.message.includes("already has a family record")) {
+      throw new Error("Your account is already linked to someone on the tree.");
     }
     throw error;
   }

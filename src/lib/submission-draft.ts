@@ -1,3 +1,10 @@
+import {
+  hasPatronymicFatherChain,
+  personHasPatronymicChain,
+  previewPatronymicName,
+} from "./patronymic-name.ts";
+import type { FamilyGraph } from "./family.ts";
+
 export type LinkSide = "father" | "mother";
 export type SubmissionKind = "new" | "edit";
 export type ParentSource = "listed" | "add" | "";
@@ -70,8 +77,23 @@ function otherWord(side: LinkSide | "") {
   return side === "mother" ? "father" : side === "father" ? "mother" : "other parent";
 }
 
+export type SubmissionContext = {
+  userId?: string | null;
+  claimsByPerson?: ReadonlyMap<string, string>;
+};
+
+export function personClaimedByOther(personId: string, ctx?: SubmissionContext): boolean {
+  if (!ctx?.claimsByPerson) return false;
+  const owner = ctx.claimsByPerson.get(personId);
+  return !!owner && owner !== ctx.userId;
+}
+
 /** Returns a problem string, or null if the draft is ready to submit. */
-export function submissionProblem(d: SubmissionDraft, existingParentCount = 0): string | null {
+export function submissionProblem(
+  d: SubmissionDraft,
+  existingParentCount = 0,
+  ctx?: SubmissionContext,
+): string | null {
   if (!d.first_name.trim()) return "Your first name is required.";
   if (!d.birth_date.trim()) return "Birthday is required.";
   if (!d.address.trim()) return "Address is required.";
@@ -101,6 +123,17 @@ export function submissionProblem(d: SubmissionDraft, existingParentCount = 0): 
     }
   }
   if (d.kind === "edit" && !d.person_id) return "Pick yourself from the tree first.";
+  if (d.kind === "edit" && d.person_id && personClaimedByOther(d.person_id, ctx)) {
+    return "That person is already linked to another account.";
+  }
+  if (ctx?.userId && ctx.claimsByPerson) {
+    for (const [personId, ownerId] of ctx.claimsByPerson) {
+      if (ownerId !== ctx.userId) continue;
+      if (d.kind === "new" || (d.kind === "edit" && d.person_id && d.person_id !== personId)) {
+        return "Your account is already linked to someone on the tree.";
+      }
+    }
+  }
   if (d.kind === "edit" && d.parent_source === "add") {
     if (d.link_side !== "father" && d.link_side !== "mother") {
       return "Choose whether you are adding your father or mother.";
@@ -111,6 +144,43 @@ export function submissionProblem(d: SubmissionDraft, existingParentCount = 0): 
     if (existingParentCount === 0 && !d.added_parent_of) {
       return `Pick who on the tree your ${parentWord(d.link_side)} belongs under.`;
     }
+  }
+  return null;
+}
+
+/** Join form only needs a given name when father + grandfather are already on the tree. */
+export function joinDraftUsesPatronymic(graph: FamilyGraph, d: SubmissionDraft): boolean {
+  if (d.link_side !== "father") return false;
+  if (d.kind === "edit" && d.person_id) return personHasPatronymicChain(graph, d.person_id);
+  if (d.parent_source === "listed" && d.parent_id) {
+    return hasPatronymicFatherChain(graph, d.parent_id);
+  }
+  if (d.parent_source === "add" && d.added_parent_of) {
+    return hasPatronymicFatherChain(graph, d.added_parent_of);
+  }
+  return false;
+}
+
+/** Preview full patronymic name while filling in a join form. */
+export function previewPatronymicForJoin(graph: FamilyGraph, d: SubmissionDraft): string | null {
+  const first = d.first_name.trim();
+  if (!first || !joinDraftUsesPatronymic(graph, d)) return null;
+  if (d.kind === "edit" && d.person_id) {
+    for (const pid of graph.parentsOf.get(d.person_id) ?? []) {
+      if (hasPatronymicFatherChain(graph, pid)) {
+        return previewPatronymicName(graph, first, pid);
+      }
+    }
+    return null;
+  }
+  if (d.parent_source === "listed" && d.parent_id) {
+    return previewPatronymicName(graph, first, d.parent_id);
+  }
+  if (d.parent_source === "add" && d.added_parent_of) {
+    const grandfather = graph.byId.get(d.added_parent_of);
+    const fatherFirst = d.added_parent_first_name.trim();
+    if (!grandfather || !fatherFirst) return null;
+    return `${first} ${fatherFirst} ${grandfather.first_name}`;
   }
   return null;
 }

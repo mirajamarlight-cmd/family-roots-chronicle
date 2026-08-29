@@ -1,4 +1,10 @@
-import { ancestryPath, recordedParents, type FamilyGraph } from "@/lib/family";
+import {
+  ancestryPath,
+  effectiveDisplayName,
+  lineagePathLabel,
+  recordedParents,
+  type FamilyGraph,
+} from "@/lib/family";
 import { cn } from "@/lib/utils";
 
 /** Name, path to the root (without repeating the name), and recorded parents. */
@@ -15,25 +21,22 @@ export function FamilyPlace({
 }) {
   const person = graph.byId.get(personId);
   if (!person) return null;
-  const ancestors = ancestryPath(graph, personId);
+  const pathLabel = lineagePathLabel(graph, personId);
   const parents = recordedParents(graph, personId);
 
   return (
     <span className={cn("block min-w-0", className)}>
-      <span className={cn("block font-medium leading-snug", compact && "text-sm")}>{person.display_name}</span>
-      {ancestors.length > 0 && (
+      <span className={cn("block font-medium leading-snug", compact && "text-sm")}>
+        {effectiveDisplayName(graph, personId)}
+      </span>
+      {pathLabel && (
         <span
           className={cn(
             "mt-0.5 block break-words leading-snug text-muted-foreground",
             compact ? "text-xs" : "text-sm",
           )}
         >
-          {ancestors.map((p, i) => (
-            <span key={p.id}>
-              {i > 0 && <span className="mx-1 opacity-40">›</span>}
-              {p.display_name}
-            </span>
-          ))}
+          {pathLabel}
         </span>
       )}
       {parents.length > 0 && (

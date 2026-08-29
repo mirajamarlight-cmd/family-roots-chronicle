@@ -12,8 +12,13 @@ function draft(over: Partial<SubmissionDraft>): SubmissionDraft {
   };
 }
 
-function expectProblem(d: SubmissionDraft, includes: string, parentCount = 0) {
-  const problem = submissionProblem(d, parentCount);
+function expectProblem(
+  d: SubmissionDraft,
+  includes: string,
+  parentCount = 0,
+  ctx?: { userId: string; claimsByPerson: Map<string, string> },
+) {
+  const problem = submissionProblem(d, parentCount, ctx);
   if (!problem?.toLowerCase().includes(includes.toLowerCase())) {
     throw new Error(`Expected problem containing "${includes}", got: ${problem}`);
   }
@@ -46,6 +51,29 @@ expectProblem(
   "belongs under",
 );
 expectProblem(draft({ kind: "edit", person_id: null }), "pick yourself");
+
+const claims = new Map([["p-taken", "other-user"]]);
+expectProblem(
+  draft({ kind: "edit", person_id: "p-taken" }),
+  "already linked",
+  0,
+  { userId: "me", claimsByPerson: claims },
+);
+if (
+  submissionProblem(draft({ kind: "edit", person_id: "p-taken" }), 0, {
+    userId: "other-user",
+    claimsByPerson: claims,
+  }) !== null
+) {
+  throw new Error("owner should still edit their linked person");
+}
+expectProblem(
+  draft({ kind: "new", link_side: "mother", parent_source: "listed", parent_id: "p-mom" }),
+  "already linked",
+  0,
+  { userId: "me", claimsByPerson: new Map([["p-mine", "me"]]) },
+);
+
 if (
   submissionProblem(
     draft({ kind: "new", link_side: "mother", parent_source: "listed", parent_id: "p-mom" }),

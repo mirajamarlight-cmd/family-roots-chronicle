@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useFamilyGraph } from "@/hooks/useFamily";
-import { ancestryPath, canonicalRootId, collectSubtreeIds, listBranches, maxGeneration, pathWithinRoot } from "@/lib/family";
+import { ancestryPath, canonicalRootId, collectSubtreeIds, effectiveDisplayName, listBranches, maxGeneration, pathWithinRoot } from "@/lib/family";
 import { ancestorsToExpand, computeVisibility } from "@/lib/tree-filters";
 import { defaultExpanded, loadTreeState, saveTreeState } from "@/lib/tree-state";
 import { SITE_NAME } from "@/lib/brand";
@@ -110,7 +110,7 @@ function TreePage() {
 
   const rootLabel = useMemo(() => {
     if (!graph || !rootId) return "Unknown";
-    return graph.byId.get(rootId)?.display_name ?? "Unknown";
+    return effectiveDisplayName(graph, rootId);
   }, [graph, rootId]);
 
   const filterVisibility = useMemo(
@@ -150,7 +150,7 @@ function TreePage() {
         if (wasExpanded) next.delete(id);
         else next.add(id);
         if (graph) {
-          const name = graph.byId.get(id)?.display_name ?? "person";
+          const name = effectiveDisplayName(graph, id);
           const childCount = graph.childrenOf.get(id)?.length ?? 0;
           setLiveMessage(
             wasExpanded ? `Branch collapsed for ${name}` : `Showing ${childCount} children of ${name}`,
@@ -166,7 +166,7 @@ function TreePage() {
     (id: string) => {
       if (!graph) return;
       const subtree = collectSubtreeIds(graph, id);
-      const name = graph.byId.get(id)?.display_name ?? "person";
+      const name = effectiveDisplayName(graph, id);
       setExpanded((prev) => {
         const next = new Set(prev);
         if (prev.has(id)) {
@@ -189,7 +189,7 @@ function TreePage() {
       setSelected(id);
       setFocusedNodeId(id);
       if (graph) {
-        const name = graph.byId.get(id)?.display_name ?? "person";
+        const name = effectiveDisplayName(graph, id);
         setLiveMessage(`${name}'s profile opened`);
       }
       navigate({ search: (prev) => ({ ...prev, person: id }), replace: true });
@@ -219,7 +219,7 @@ function TreePage() {
       const path = personId ? ancestryPath(graph, personId).map((p) => p.id) : [];
       setExpanded(new Set([branchId, ...path, ...(personId ? [personId] : [])]));
       setFocusedNodeId(personId);
-      const name = graph.byId.get(personId ?? branchId)?.display_name ?? "branch";
+      const name = effectiveDisplayName(graph, personId ?? branchId);
       setLiveMessage(`Viewing ${name} in this branch`);
       navigate({
         search: (prev) => ({

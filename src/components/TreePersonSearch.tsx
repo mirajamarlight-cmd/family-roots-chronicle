@@ -1,7 +1,10 @@
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { PersonSearchResults, useDuplicateNames } from "@/components/PersonSearchResults";
+import {
+  duplicateNamesForResults,
+  PersonSearchResults,
+} from "@/components/PersonSearchResults";
 import { Input } from "@/components/ui/input";
 import type { FamilyGraph } from "@/lib/family";
 import { searchPeople } from "@/lib/family";
@@ -36,7 +39,7 @@ export function TreePersonSearch({
     () => (debounced.trim() ? searchPeople(graph, debounced, 12) : []),
     [graph, debounced],
   );
-  const duplicateNames = useDuplicateNames(results);
+  const duplicateNames = duplicateNamesForResults(graph, results);
   const showDropdown = open && debounced.trim().length > 0;
 
   useEffect(() => {

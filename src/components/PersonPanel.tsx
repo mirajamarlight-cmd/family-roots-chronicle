@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
-  ancestryPath,
   branchFocusId,
   descendantCount,
+  effectiveDisplayName,
+  lineagePathLabel,
   siblingsOf,
   type FamilyGraph,
   type Person,
@@ -35,7 +36,7 @@ function Names({
           onClick={() => onSelect(id)}
           className="rounded-full border border-border bg-secondary/60 px-2.5 py-1 text-xs transition-colors hover:bg-secondary"
         >
-          {graph.byId.get(id)?.display_name ?? "Unknown"}
+          {effectiveDisplayName(graph, id)}
         </button>
       ))}
     </div>
@@ -60,8 +61,8 @@ function PanelBody({
   const parents = graph.parentsOf.get(person.id) ?? [];
   const children = graph.childrenOf.get(person.id) ?? [];
   const siblings = siblingsOf(graph, person.id);
-  const path = ancestryPath(graph, person.id);
   const branchId = branchFocusId(graph, person.id);
+  const pathLabel = lineagePathLabel(graph, person.id);
 
   return (
     <>
@@ -70,7 +71,7 @@ function PanelBody({
           <PersonAvatarBadge graph={graph} personId={person.id} size="lg" />
           <div className="min-w-0">
             <h2 id="person-panel-title" className="font-display text-xl font-semibold tracking-tight">
-              {person.display_name}
+              {effectiveDisplayName(graph, person.id)}
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
               Generation {(graph.depthOf.get(person.id) ?? 0) + 1} ·{" "}
@@ -83,10 +84,8 @@ function PanelBody({
         </Button>
       </div>
 
-      {path.length > 0 && (
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          {path.map((p) => p.display_name).join(" › ")} › {person.display_name}
-        </p>
+      {pathLabel && (
+        <p className="text-xs leading-relaxed text-muted-foreground">{pathLabel}</p>
       )}
 
       <div className="flex flex-wrap gap-1.5">

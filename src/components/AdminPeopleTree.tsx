@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import {
   canonicalRootId,
   collectSubtreeIds,
+  effectiveDisplayName,
   maxGeneration,
   type FamilyGraph,
 } from "@/lib/family";
@@ -205,7 +206,7 @@ export function AdminPeopleTree({ graph, selectedId, onSelect, onAddChild }: Pro
                     key={id}
                     {...treeProps}
                     rootId={id}
-                    ariaLabel={`Unlinked family starting at ${graph.byId.get(id)?.display_name ?? "Unknown"}`}
+                    ariaLabel={`Unlinked family starting at ${effectiveDisplayName(graph, id)}`}
                   />
                 ))}
               </div>

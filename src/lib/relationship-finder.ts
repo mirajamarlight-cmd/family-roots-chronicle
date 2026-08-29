@@ -1,4 +1,5 @@
-import type { FamilyGraph, Person } from "./family";
+import { effectiveDisplayName } from "./patronymic-name.ts";
+import type { FamilyGraph, Person } from "./family.ts";
 
 export type RelationshipResult =
   | { kind: "same"; aId: string; bId: string }
@@ -17,7 +18,7 @@ export type RelationshipResult =
 type AncestorMap = Map<string, number>;
 
 function personName(graph: FamilyGraph, id: string): string {
-  return graph.byId.get(id)?.display_name ?? "Unknown";
+  return effectiveDisplayName(graph, id);
 }
 
 /** Shortest upward distances from `personId` (self = 0). */

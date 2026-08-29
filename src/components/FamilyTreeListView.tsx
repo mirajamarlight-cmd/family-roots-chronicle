@@ -3,7 +3,7 @@ import { Search } from "lucide-react";
 import { AccessibleFamilyTree } from "@/components/AccessibleFamilyTree";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { FamilyGraph } from "@/lib/family";
+import { effectiveDisplayName, type FamilyGraph } from "@/lib/family";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -43,7 +43,7 @@ export function FamilyTreeListView({
   onClearFilters,
   className,
 }: Props) {
-  const rootName = graph.byId.get(rootId)?.display_name ?? "Unknown";
+  const rootName = effectiveDisplayName(graph, rootId);
   const isEmpty = filtersActive && matchCount === 0;
 
   return (

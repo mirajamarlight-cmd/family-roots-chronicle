@@ -8,6 +8,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { SITE_ORIGIN } from "@/lib/brand";
+
+type AuthMode = "signin" | "signup";
+
+async function continueWithPassword(
+  mode: AuthMode,
+  email: string,
+  password: string,
+  redirectTo: string,
+) {
+  if (mode === "signin") {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error("Email or password is incorrect.");
+    return true;
+  }
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo: `${SITE_ORIGIN}${redirectTo}` },
+  });
+  if (error) throw error;
+  return !!data.session;
+}
 
 export function AuthSignInCard({
   title,
@@ -20,9 +44,9 @@ export function AuthSignInCard({
   redirectTo: string;
   footer?: ReactNode;
 }) {
-  const [mode, setMode] = useState<"in" | "up">("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mode, setMode] = useState<AuthMode>("signin");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -32,19 +56,20 @@ export function AuthSignInCard({
       return;
     }
     setBusy(true);
-    const fn =
-      mode === "in"
-        ? supabase.auth.signInWithPassword({ email: email.trim(), password })
-        : supabase.auth.signUp({
-            email: email.trim(),
-            password,
-            options: { emailRedirectTo: window.location.origin + redirectTo },
-          });
-    const { error } = await fn;
-    setBusy(false);
-    if (error) toast.error(error.message);
-    else if (mode === "in") toast.success("Signed in");
-    else toast.success("Account created. Check your email if you are asked to confirm it.");
+    try {
+      const signedIn = await continueWithPassword(mode, email.trim(), password, redirectTo);
+      toast.success(
+        mode === "signin"
+          ? "Signed in"
+          : signedIn
+            ? "Account created"
+            : "Account created. Check your email to confirm it.",
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not continue");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -63,6 +88,31 @@ export function AuthSignInCard({
           }}
         >
           {description && <p className="text-sm text-muted-foreground">{description}</p>}
+          <div
+            className="grid grid-cols-2 rounded-xl bg-secondary/70 p-1"
+            aria-label="Choose sign in or create account"
+          >
+            {(
+              [
+                ["signin", "Sign in"],
+                ["signup", "Create account"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={mode === value}
+                onClick={() => setMode(value)}
+                className={
+                  mode === value
+                    ? "rounded-lg bg-background px-3 py-2 text-sm font-medium text-foreground shadow-sm"
+                    : "rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="auth-email">Email</Label>
             <Input
@@ -82,7 +132,7 @@ export function AuthSignInCard({
                 id="auth-password"
                 name="password"
                 type={showPassword ? "text" : "password"}
-                autoComplete={mode === "in" ? "current-password" : "new-password"}
+                autoComplete={mode === "signin" ? "current-password" : "new-password"}
                 required
                 minLength={6}
                 value={password}
@@ -98,37 +148,16 @@ export function AuthSignInCard({
                 {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
               </button>
             </div>
-            <p className="text-xs text-muted-foreground">At least 6 characters.</p>
+            <p className="text-xs text-muted-foreground">
+              {mode === "signin"
+                ? "Use the email and password from your existing account."
+                : "Choose a password with at least 6 characters."}
+            </p>
           </div>
           <Button type="submit" disabled={busy} className="w-full">
             {busy && <Loader2 className="size-4 animate-spin" aria-hidden />}
-            {mode === "in" ? "Sign in" : "Create account"}
+            {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
           </Button>
-          <p className="text-center text-sm text-muted-foreground">
-            {mode === "in" ? (
-              <>
-                New here?{" "}
-                <button
-                  type="button"
-                  className="font-medium text-primary hover:underline"
-                  onClick={() => setMode("up")}
-                >
-                  Create an account
-                </button>
-              </>
-            ) : (
-              <>
-                Already have an account?{" "}
-                <button
-                  type="button"
-                  className="font-medium text-primary hover:underline"
-                  onClick={() => setMode("in")}
-                >
-                  Sign in
-                </button>
-              </>
-            )}
-          </p>
           {footer}
           <BuiltByRaafat className="pt-1 text-center text-[11px] text-muted-foreground" />
         </form>

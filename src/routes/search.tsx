@@ -6,7 +6,10 @@ import { AppShell } from "@/components/AppShell";
 import { ContentCard } from "@/components/ContentCard";
 import { PageHeader } from "@/components/PageHeader";
 import { PageState } from "@/components/PageState";
-import { PersonSearchResults, useDuplicateNames } from "@/components/PersonSearchResults";
+import {
+  duplicateNamesForResults,
+  PersonSearchResults,
+} from "@/components/PersonSearchResults";
 import { Input } from "@/components/ui/input";
 import { useFamilyGraph } from "@/hooks/useFamily";
 import { searchPeople } from "@/lib/family";
@@ -36,7 +39,10 @@ function SearchPage() {
   const [query, setQuery] = useState("");
 
   const results = useMemo(() => (graph ? searchPeople(graph, query) : []), [graph, query]);
-  const duplicateNames = useDuplicateNames(results);
+  const duplicateNames = useMemo(
+    () => (graph ? duplicateNamesForResults(graph, results) : new Set<string>()),
+    [graph, results],
+  );
   const trimmed = query.trim();
 
   return (

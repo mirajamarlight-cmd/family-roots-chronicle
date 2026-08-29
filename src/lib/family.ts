@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
+import { effectiveDisplayName } from "./patronymic-name.ts";
+
 export type Person = {
   id: string;
   first_name: string;
@@ -74,11 +76,10 @@ export function buildGraph(people: Person[], links: Link[], marriages: Marriage[
     );
   }
 
-  const sortByName = (ids: string[]) =>
+  const sortByName = (ids: string[], g: FamilyGraph) =>
     ids.sort((a, b) =>
-      (byId.get(a)?.display_name ?? "").localeCompare(byId.get(b)?.display_name ?? ""),
+      effectiveDisplayName(g, a).localeCompare(effectiveDisplayName(g, b)),
     );
-  childrenOf.forEach(sortByName);
 
   const roots = people.filter((p) => !parentsOf.has(p.id)).map((p) => p.id);
 
@@ -105,7 +106,7 @@ export function buildGraph(people: Person[], links: Link[], marriages: Marriage[
   // people not reachable from canonical root (shouldn't happen, but be safe)
   for (const p of people) if (!depthOf.has(p.id)) depthOf.set(p.id, 0);
 
-  return {
+  const graph: FamilyGraph = {
     people,
     byId,
     childrenOf,
@@ -117,6 +118,9 @@ export function buildGraph(people: Person[], links: Link[], marriages: Marriage[
     depthOf,
     branchOf,
   };
+  childrenOf.forEach((ids) => sortByName(ids, graph));
+
+  return graph;
 }
 
 export function descendantCount(graph: FamilyGraph, id: string): number {
@@ -146,6 +150,7 @@ function canReachAncestor(graph: FamilyGraph, fromId: string, ancestorId: string
   return false;
 }
 
+
 /** Parent that leads toward the canonical root, else the first recorded parent. */
 function parentTowardRoot(graph: FamilyGraph, id: string): string | undefined {
   const parents = graph.parentsOf.get(id) ?? [];
@@ -161,7 +166,7 @@ export function recordedParents(graph: FamilyGraph, id: string) {
     const person = graph.byId.get(pid);
     const gender = (person?.gender ?? "").toLowerCase();
     const role = gender === "male" ? "Father" : gender === "female" ? "Mother" : "Parent";
-    return { id: pid, name: person?.display_name ?? "Unknown", role };
+    return { id: pid, name: effectiveDisplayName(graph, pid), role };
   });
 }
 
@@ -186,10 +191,36 @@ export function lineageChain(graph: FamilyGraph, id: string): Person[] {
   return [...ancestryPath(graph, id), person];
 }
 
+/** Short ancestor chain for disambiguation (given names only, e.g. Yonis › Ahmed › Abdosh). */
+export function lineagePathLabel(graph: FamilyGraph, id: string): string {
+  return ancestryPath(graph, id)
+    .map((p) => p.first_name)
+    .join(" › ");
+}
+
+/** Effective display names shared by more than one person on the tree. */
+export function duplicateEffectiveNames(graph: FamilyGraph): Set<string> {
+  const counts = new Map<string, number>();
+  for (const p of graph.people) {
+    const name = effectiveDisplayName(graph, p.id);
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([name]) => name));
+}
+
+/** Extra lineage hint when the full name alone is not unique. */
+export function personContextLabel(graph: FamilyGraph, id: string, duplicates: Set<string>): string | null {
+  if (!duplicates.has(effectiveDisplayName(graph, id))) return null;
+  const path = lineagePathLabel(graph, id);
+  return path || null;
+}
+
+export { effectiveDisplayName, hasPatronymicFatherChain, personHasPatronymicChain, previewPatronymicName } from "./patronymic-name.ts";
+
 /** Human-readable lineage for search results and duplicate-name disambiguation. */
 export function lineageLabel(graph: FamilyGraph, id: string): string {
   const chain = lineageChain(graph, id);
-  return chain.length ? chain.map((p) => p.display_name).join(" › ") : "Unknown";
+  return chain.length ? chain.map((p) => p.first_name).join(" › ") : "Unknown";
 }
 
 /** Root id to focus when viewing a person's branch in the tree. */
@@ -224,7 +255,8 @@ export function searchPeople(graph: FamilyGraph, query: string, limit = 50): Per
   if (!q) return [];
   const scored: Array<{ p: Person; score: number }> = [];
   for (const p of graph.people) {
-    const name = [p.first_name, p.middle_name, p.last_name, p.display_name]
+    const label = effectiveDisplayName(graph, p.id);
+    const name = [p.first_name, p.middle_name, p.last_name, label, p.display_name]
       .filter(Boolean)
       .join(" ")
       .toLowerCase();
@@ -235,7 +267,7 @@ export function searchPeople(graph: FamilyGraph, query: string, limit = 50): Per
   scored.sort(
     (a, b) =>
       a.score - b.score ||
-      a.p.display_name.localeCompare(b.p.display_name) ||
+      effectiveDisplayName(graph, a.p.id).localeCompare(effectiveDisplayName(graph, b.p.id)) ||
       lineageLabel(graph, a.p.id).localeCompare(lineageLabel(graph, b.p.id)),
   );
   return scored.slice(0, limit).map((s) => s.p);
@@ -252,7 +284,7 @@ export function listBranches(graph: FamilyGraph): { id: string; name: string }[]
   const ids = new Set<string>();
   for (const b of graph.branchOf.values()) if (b) ids.add(b);
   return [...ids]
-    .map((id) => ({ id, name: graph.byId.get(id)?.display_name ?? "Unknown" }))
+    .map((id) => ({ id, name: effectiveDisplayName(graph, id) }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 

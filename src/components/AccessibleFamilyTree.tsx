@@ -2,7 +2,7 @@ import { ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 
 import { PersonAvatarBadge } from "@/components/person-identity";
-import { descendantCount, type FamilyGraph } from "@/lib/family";
+import { descendantCount, duplicateEffectiveNames, effectiveDisplayName, personContextLabel, type FamilyGraph } from "@/lib/family";
 import { cn } from "@/lib/utils";
 
 export function highlightName(name: string, query: string) {
@@ -38,6 +38,7 @@ type TreeItemProps = {
   orderedIds: string[];
   itemRef: (id: string, el: HTMLLIElement | null) => void;
   renderEnd?: ((id: string) => ReactNode) | undefined;
+  duplicateNames?: Set<string> | undefined;
 };
 
 function TreeItem({
@@ -56,6 +57,7 @@ function TreeItem({
   orderedIds,
   itemRef,
   renderEnd,
+  duplicateNames,
 }: TreeItemProps) {
   if (!visible.has(id)) return null;
 
@@ -69,6 +71,7 @@ function TreeItem({
   const desc = descendantCount(graph, id);
   const isFocused = focusedId === id;
   const isSelected = selectedId === id;
+  const contextLabel = duplicateNames ? personContextLabel(graph, id, duplicateNames) : null;
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     const idx = orderedIds.indexOf(id);
@@ -141,9 +144,16 @@ function TreeItem({
 
         <PersonAvatarBadge graph={graph} personId={id} size="sm" />
 
-        <span className="min-w-0 font-display text-base font-medium leading-tight">
-          {selfMatch.has(id) ? highlightName(person.display_name, query) : person.display_name}
-        </span>
+        <div className="min-w-0 flex-1">
+          <span className="block font-display text-base font-medium leading-tight">
+            {selfMatch.has(id)
+              ? highlightName(effectiveDisplayName(graph, id), query)
+              : effectiveDisplayName(graph, id)}
+          </span>
+          {contextLabel && (
+            <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{contextLabel}</span>
+          )}
+        </div>
 
         {showMeta && hasKids && (
           <span className="rounded-full bg-secondary px-2 py-px text-[11px] font-semibold text-muted-foreground">
@@ -191,6 +201,7 @@ function TreeItem({
               orderedIds={orderedIds}
               itemRef={itemRef}
               renderEnd={renderEnd}
+              duplicateNames={duplicateNames}
             />
           ))}
         </ul>
@@ -251,7 +262,8 @@ export function AccessibleFamilyTree({
   renderEnd?: ((id: string) => ReactNode) | undefined;
 }) {
   const itemRefs = useRef(new Map<string, HTMLLIElement>());
-  const rootName = graph.byId.get(rootId)?.display_name ?? "Unknown";
+  const rootName = effectiveDisplayName(graph, rootId);
+  const duplicateNames = useMemo(() => duplicateEffectiveNames(graph), [graph]);
 
   const orderedIds = useMemo(
     () => collectVisibleOrdered(graph, rootId, expanded, visible),
@@ -302,6 +314,7 @@ export function AccessibleFamilyTree({
         orderedIds={orderedIds}
         itemRef={setItemRef}
         renderEnd={renderEnd}
+        duplicateNames={duplicateNames}
       />
     </ul>
   );

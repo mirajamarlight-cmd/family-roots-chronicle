@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { PageState } from "@/components/PageState";
 import { PersonAvatarBadge } from "@/components/person-identity";
 import { useFamilyGraph } from "@/hooks/useFamily";
-import { descendantCount } from "@/lib/family";
+import { descendantCount, effectiveDisplayName } from "@/lib/family";
 import { SITE_NAME } from "@/lib/brand";
 
 const GEN_COLORS = [
@@ -71,7 +71,7 @@ function StatisticsPage() {
     const branches = [...branchIds]
       .map((id) => ({
         id,
-        name: graph.byId.get(id)?.display_name ?? "Unknown",
+        name: effectiveDisplayName(graph, id),
         size: descendantCount(graph, id) + 1,
       }))
       .sort((a, b) => b.size - a.size);

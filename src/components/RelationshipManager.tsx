@@ -4,7 +4,7 @@ import { toast } from "sonner";
 
 import { RelationshipPersonPicker } from "@/components/RelationshipPersonPicker";
 import { Button } from "@/components/ui/button";
-import type { FamilyGraph } from "@/lib/family";
+import { effectiveDisplayName, type FamilyGraph } from "@/lib/family";
 import { siblingsOf } from "@/lib/family";
 import {
   addParentChild,
@@ -82,7 +82,7 @@ export function RelationshipManager({
         <ul className="space-y-1">
           {parents.map((id) => (
             <li key={id} className="flex items-center justify-between gap-2 text-sm">
-              <span>{graph.byId.get(id)?.display_name ?? "Unknown"}</span>
+              <span>{effectiveDisplayName(graph, id)}</span>
               <Button
                 size="icon"
                 variant="ghost"
@@ -116,7 +116,7 @@ export function RelationshipManager({
         <ul className="space-y-1">
           {children.map((id) => (
             <li key={id} className="flex items-center justify-between gap-2 text-sm">
-              <span>{graph.byId.get(id)?.display_name ?? "Unknown"}</span>
+              <span>{effectiveDisplayName(graph, id)}</span>
               <Button
                 size="icon"
                 variant="ghost"
@@ -148,7 +148,7 @@ export function RelationshipManager({
         <ul className="space-y-1">
           {siblings.map((id) => (
             <li key={id} className="text-sm">
-              {graph.byId.get(id)?.display_name ?? "Unknown"}
+              {effectiveDisplayName(graph, id)}
             </li>
           ))}
           {siblings.length === 0 && (

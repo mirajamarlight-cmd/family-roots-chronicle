@@ -3,6 +3,8 @@ import { BarChart3, GitCompare, House, Search, Settings, TreeDeciduous, UserPlus
 import type { ReactNode } from "react";
 
 import { BuiltByRaafat } from "@/components/brand/built-by-raafat";
+import { ProfileMenu } from "@/components/ProfileMenu";
+import { useJoinNav } from "@/hooks/useFamily";
 import { SITE_LOGO_PATH, SITE_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +22,23 @@ const NAV = [
 
 const navLinkClass =
   "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground";
+
+function AccountNavLink({ className }: { className?: string }) {
+  const { isProfile } = useJoinNav();
+
+  if (isProfile) return <ProfileMenu className={className} />;
+
+  return (
+    <Link
+      to="/join"
+      activeProps={{ className: "bg-primary/10 font-medium text-primary" }}
+      className={cn(navLinkClass, className)}
+    >
+      <UserPlus className="size-4" aria-hidden />
+      Join
+    </Link>
+  );
+}
 
 export function AppShell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   const navigate = useNavigate();
@@ -51,14 +70,7 @@ export function AppShell({ children, wide }: { children: ReactNode; wide?: boole
             </span>
           </Link>
           <div className="flex items-center gap-1">
-            <Link
-              to="/join"
-              activeProps={{ className: "bg-primary/10 text-primary" }}
-              className={cn(navLinkClass, "gap-1 px-2.5 md:hidden")}
-            >
-              <UserPlus className="size-4" aria-hidden />
-              Join
-            </Link>
+            <AccountNavLink className="gap-1 px-2.5 md:hidden" />
             <Link
               to="/admin"
               activeProps={{ className: "bg-primary/10 text-primary" }}
@@ -91,14 +103,7 @@ export function AppShell({ children, wide }: { children: ReactNode; wide?: boole
                   {label}
                 </Link>
               ))}
-              <Link
-                to="/join"
-                activeProps={{ className: "bg-primary/10 font-medium text-primary" }}
-                className={navLinkClass}
-              >
-                <UserPlus className="size-4" aria-hidden />
-                Join
-              </Link>
+              <AccountNavLink />
               <Link
                 to="/admin"
                 activeProps={{ className: "bg-primary/10 font-medium text-primary" }}

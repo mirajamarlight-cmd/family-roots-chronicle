@@ -328,6 +328,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      person_claim_index: {
+        Args: never
+        Returns: {
+          person_id: string
+          user_id: string
+        }[]
+      }
       reject_submission: { Args: { _id: string }; Returns: boolean }
     }
     Enums: {

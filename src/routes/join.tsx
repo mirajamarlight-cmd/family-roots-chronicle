@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search as SearchIcon } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -11,19 +11,23 @@ import { FamilyPlace } from "@/components/family-place";
 import { JoinRecordForm } from "@/components/JoinRecordForm";
 import { PageHeader } from "@/components/PageHeader";
 import { PageState } from "@/components/PageState";
-import { PersonAvatarBadge } from "@/components/person-identity";
-import { PersonSearchResults, useDuplicateNames } from "@/components/PersonSearchResults";
+import {
+  duplicateNamesForResults,
+  PersonSearchResults,
+} from "@/components/PersonSearchResults";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuthSession, useFamilyGraph } from "@/hooks/useFamily";
+import { useAuthSession, useFamilyGraph, useJoinState } from "@/hooks/useFamily";
 import { supabase } from "@/integrations/supabase/client";
 import { SITE_NAME } from "@/lib/brand";
-import { recordedParents, searchPeople, type Person } from "@/lib/family";
+import { effectiveDisplayName, recordedParents, searchPeople, type Person } from "@/lib/family";
+import { draftFromPerson } from "@/lib/profile";
+import { joinDraftUsesPatronymic } from "@/lib/submission-draft";
 import {
   emptyDraft,
-  fetchJoinState,
+  fetchPersonClaimIndex,
+  personClaimedByOther,
   submitRecord,
-  type PersonClaim,
   type PersonSubmission,
   type SubmissionDraft,
 } from "@/lib/submissions";
@@ -44,7 +48,7 @@ export const Route = createFileRoute("/join")({
   component: JoinPage,
 });
 
-const STEPS = ["Sign in", "Find you", "Details", "Waiting"] as const;
+const STEPS = ["Account", "Find you", "Details", "Waiting"] as const;
 
 function JoinSteps({ current }: { current: 1 | 2 | 3 | 4 }) {
   return (
@@ -107,22 +111,6 @@ function JoinFrame({
       </div>
     </AppShell>
   );
-}
-
-function draftFromPerson(person: Person, email: string, claim: PersonClaim | null): SubmissionDraft {
-  const mine = claim?.person_id === person.id ? claim : null;
-  return {
-    ...emptyDraft(mine?.email ?? email),
-    kind: "edit",
-    person_id: person.id,
-    first_name: person.first_name,
-    middle_name: person.middle_name ?? "",
-    last_name: person.last_name ?? "",
-    birth_date: person.birth_date ?? "",
-    address: mine?.address ?? "",
-    phone: mine?.phone ?? "",
-    notes: person.notes ?? "",
-  };
 }
 
 function pendingName(
@@ -227,59 +215,16 @@ function PendingSummary({
   );
 }
 
-function OnTheTreeCard({
-  graph,
-  personId,
-  claim,
-  onUpdate,
-}: {
-  graph: NonNullable<ReturnType<typeof useFamilyGraph>["data"]>;
-  personId: string;
-  claim: PersonClaim;
-  onUpdate: () => void;
-}) {
-  const person = graph.byId.get(personId);
-  if (!person) return null;
-
-  return (
-    <ContentCard>
-      <p className="text-sm font-medium">You are on the family record</p>
-      <div className="mt-3 flex items-start gap-3">
-        <PersonAvatarBadge graph={graph} personId={personId} size="md" />
-        <FamilyPlace graph={graph} personId={personId} className="min-w-0 flex-1" />
-      </div>
-      {(claim.address || claim.phone || claim.email) && (
-        <div className="mt-4 border-t border-border/70 pt-3 text-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Contact (private)
-          </p>
-          {claim.address && <p className="mt-2">{claim.address}</p>}
-          {claim.phone && <p className="mt-1">{claim.phone}</p>}
-          {claim.email && <p className="mt-1">{claim.email}</p>}
-        </div>
-      )}
-      <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-        <Button asChild>
-          <Link to="/tree" search={{ person: personId }}>
-            View on the tree
-          </Link>
-        </Button>
-        <Button type="button" variant="outline" onClick={onUpdate}>
-          Update details
-        </Button>
-      </div>
-    </ContentCard>
-  );
-}
-
 function JoinPage() {
   const { userId, email, loading: authLoading } = useAuthSession();
   const { data: graph, isLoading: graphLoading, error, refetch } = useFamilyGraph();
   const queryClient = useQueryClient();
-  const joinQuery = useQuery({
-    queryKey: ["join-state", userId],
+  const joinQuery = useJoinState(userId);
+  const claimsQuery = useQuery({
+    queryKey: ["person-claim-index"],
     enabled: !!userId,
-    queryFn: () => fetchJoinState(userId!),
+    queryFn: fetchPersonClaimIndex,
+    staleTime: 30_000,
   });
 
   const [query, setQuery] = useState("");
@@ -288,39 +233,39 @@ function JoinPage() {
 
   const pending = joinQuery.data?.pending ?? null;
   const claim = joinQuery.data?.claim ?? null;
+  const claimIndex = claimsQuery.data;
+  const submissionContext = useMemo(
+    () => (userId && claimIndex ? { userId, claimsByPerson: claimIndex } : undefined),
+    [userId, claimIndex],
+  );
 
   useEffect(() => {
     setDraft(null);
     setQuery("");
   }, [userId]);
 
-  useEffect(() => {
-    const channel = supabase
-      .channel("join-submissions")
-      .on("postgres_changes", { event: "*", schema: "public", table: "person_submissions" }, () => {
-        void queryClient.invalidateQueries({ queryKey: ["join-state"] });
-        void queryClient.invalidateQueries({ queryKey: ["family-graph"] });
-      })
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
-
   const results = useMemo(
     () => (graph && query.trim() ? searchPeople(graph, query) : []),
     [graph, query],
   );
-  const duplicateNames = useDuplicateNames(results);
+  const duplicateNames = useMemo(
+    () => (graph ? duplicateNamesForResults(graph, results) : new Set<string>()),
+    [graph, results],
+  );
 
   const submit = async () => {
     if (!userId || !draft) return;
     setBusy(true);
     try {
+      const payload =
+        graph && joinDraftUsesPatronymic(graph, draft)
+          ? { ...draft, middle_name: "", last_name: "" }
+          : draft;
       await submitRecord(
         userId,
-        draft,
-        draft.person_id && graph ? recordedParents(graph, draft.person_id).length : 0,
+        payload,
+        payload.person_id && graph ? recordedParents(graph, payload.person_id).length : 0,
+        submissionContext,
       );
       toast.success("Sent for review. The tree will not change until an admin approves it.");
       setDraft(null);
@@ -345,7 +290,7 @@ function JoinPage() {
       <JoinFrame
         step={1}
         title="Add yourself"
-        description="Sign in or create an account. Then find yourself on the tree, or register."
+        description="Enter your email and a password to continue. An admin still reviews your family details before they appear on the tree."
       >
         <AuthSignInCard redirectTo="/join" />
       </JoinFrame>
@@ -393,7 +338,8 @@ function JoinPage() {
   }
 
   if (draft && graph) {
-    const editingName = draft.person_id ? graph.byId.get(draft.person_id)?.display_name : null;
+    const editingName =
+      draft.person_id && graph ? effectiveDisplayName(graph, draft.person_id) : null;
     const claimedHere = !!claim && draft.person_id === claim.person_id;
     return (
       <JoinFrame
@@ -410,30 +356,14 @@ function JoinPage() {
           onBack={() => setDraft(null)}
           lockedPerson={claimedHere}
           busy={busy}
+          submissionContext={submissionContext}
         />
       </JoinFrame>
     );
   }
 
-  if (claim && graph?.byId.has(claim.person_id)) {
-    return (
-      <JoinFrame
-        step="done"
-        title="You're on the tree"
-        description="You are already on the family record. Open it, or send an update for approval."
-        email={email}
-      >
-        <OnTheTreeCard
-          graph={graph}
-          personId={claim.person_id}
-          claim={claim}
-          onUpdate={() => {
-            const person = graph.byId.get(claim.person_id);
-            if (person) setDraft(draftFromPerson(person, email ?? "", claim));
-          }}
-        />
-      </JoinFrame>
-    );
+  if (claim && !draft) {
+    return <Navigate to="/" replace />;
   }
 
   const searched = query.trim().length > 0;
@@ -469,7 +399,13 @@ function JoinPage() {
               graph={graph}
               results={results}
               duplicateNames={duplicateNames}
+              claimedByPerson={claimIndex}
+              currentUserId={userId}
               onSelect={(id) => {
+                if (personClaimedByOther(id, submissionContext)) {
+                  toast.error("That person is already linked to another account.");
+                  return;
+                }
                 const person = graph.byId.get(id);
                 if (person) setDraft(draftFromPerson(person, email ?? "", claim));
               }}

@@ -11,9 +11,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { recordedParents, type FamilyGraph } from "@/lib/family";
 import {
+  joinDraftUsesPatronymic,
+  previewPatronymicForJoin,
   submissionProblem,
   type LinkSide,
   type ParentSource,
+  type SubmissionContext,
   type SubmissionDraft,
 } from "@/lib/submission-draft";
 import { cn } from "@/lib/utils";
@@ -134,6 +137,7 @@ export function JoinRecordForm({
   onBack,
   lockedPerson,
   busy,
+  submissionContext,
 }: {
   graph: FamilyGraph;
   draft: SubmissionDraft;
@@ -142,13 +146,16 @@ export function JoinRecordForm({
   onBack?: (() => void) | undefined;
   lockedPerson?: boolean | undefined;
   busy: boolean;
+  submissionContext?: SubmissionContext | undefined;
 }) {
   const isNew = draft.kind === "new";
   const linkWord = draft.link_side === "mother" ? "mother" : draft.link_side === "father" ? "father" : "parent";
   const otherWord = draft.link_side === "mother" ? "father" : draft.link_side === "father" ? "mother" : "other parent";
   const picked = draft.person_id ? graph.byId.get(draft.person_id) : null;
   const existingParents = picked ? recordedParents(graph, picked.id) : [];
-  const problem = submissionProblem(draft, existingParents.length);
+  const problem = submissionProblem(draft, existingParents.length, submissionContext);
+  const usesPatronymic = joinDraftUsesPatronymic(graph, draft);
+  const patronymicPreview = previewPatronymicForJoin(graph, draft);
   const [attempted, setAttempted] = useState(false);
   const errorRef = useRef<HTMLParagraphElement>(null);
 
@@ -437,7 +444,8 @@ export function JoinRecordForm({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="first_name">
-              First name <span className="text-muted-foreground">*</span>
+              {usesPatronymic ? "Your first name" : "First name"}{" "}
+              <span className="text-muted-foreground">*</span>
             </Label>
             <Input
               id="first_name"
@@ -448,25 +456,35 @@ export function JoinRecordForm({
               onChange={(e) => onChange({ ...draft, first_name: e.target.value })}
             />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="middle_name">Middle name</Label>
-            <Input
-              id="middle_name"
-              autoComplete="additional-name"
-              value={draft.middle_name}
-              onChange={(e) => onChange({ ...draft, middle_name: e.target.value })}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="last_name">Last name</Label>
-            <Input
-              id="last_name"
-              name="family-name"
-              autoComplete="family-name"
-              value={draft.last_name}
-              onChange={(e) => onChange({ ...draft, last_name: e.target.value })}
-            />
-          </div>
+          {!usesPatronymic && (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="middle_name">Middle name</Label>
+                <Input
+                  id="middle_name"
+                  autoComplete="additional-name"
+                  value={draft.middle_name}
+                  onChange={(e) => onChange({ ...draft, middle_name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="last_name">Last name</Label>
+                <Input
+                  id="last_name"
+                  name="family-name"
+                  autoComplete="family-name"
+                  value={draft.last_name}
+                  onChange={(e) => onChange({ ...draft, last_name: e.target.value })}
+                />
+              </div>
+            </>
+          )}
+          {patronymicPreview && (
+            <p className="text-sm text-muted-foreground sm:col-span-2">
+              On the tree you will appear as{" "}
+              <span className="font-medium text-foreground">{patronymicPreview}</span>.
+            </p>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="birth_date">
               Birthday <span className="text-muted-foreground">*</span>

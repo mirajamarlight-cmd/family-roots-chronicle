@@ -4,14 +4,20 @@ import { GitBranch } from "lucide-react";
 import { FamilyPlace } from "@/components/family-place";
 import { PersonAvatarBadge } from "@/components/person-identity";
 import type { FamilyGraph, Person } from "@/lib/family";
+import { duplicateEffectiveNames, effectiveDisplayName } from "@/lib/family";
 import { cn } from "@/lib/utils";
 
-export function useDuplicateNames(results: Person[]) {
+export function duplicateNamesForResults(graph: FamilyGraph, results: Person[]) {
+  const global = duplicateEffectiveNames(graph);
   const counts = new Map<string, number>();
   for (const person of results) {
-    counts.set(person.display_name, (counts.get(person.display_name) ?? 0) + 1);
+    const name = effectiveDisplayName(graph, person.id);
+    counts.set(name, (counts.get(name) ?? 0) + 1);
   }
-  return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([name]) => name));
+  const inResults = new Set(
+    [...counts.entries()].filter(([, count]) => count > 1).map(([name]) => name),
+  );
+  return new Set([...global, ...inResults]);
 }
 
 type RowProps = {
@@ -21,15 +27,33 @@ type RowProps = {
   showBranchLink?: boolean | undefined;
   onSelect?: ((id: string) => void) | undefined;
   compact?: boolean | undefined;
+  claimedByPerson?: ReadonlyMap<string, string> | undefined;
+  currentUserId?: string | null | undefined;
 };
 
-function ResultRow({ graph, person, mode, showBranchLink, onSelect, compact }: RowProps) {
+function ResultRow({
+  graph,
+  person,
+  mode,
+  showBranchLink,
+  onSelect,
+  compact,
+  claimedByPerson,
+  currentUserId,
+}: RowProps) {
   const branchId = graph.branchOf.get(person.id);
+  const claimedByOther =
+    !!claimedByPerson?.get(person.id) && claimedByPerson.get(person.id) !== currentUserId;
 
   const inner = (
     <>
       <PersonAvatarBadge graph={graph} personId={person.id} size={compact ? "sm" : "md"} />
       <FamilyPlace graph={graph} personId={person.id} compact={compact} className="flex-1" />
+      {claimedByOther && (
+        <span className="shrink-0 rounded-full bg-secondary px-2 py-1 text-[11px] font-medium text-muted-foreground">
+          Linked
+        </span>
+      )}
       {showBranchLink && branchId && mode === "link" && (
         <Link
           to="/tree"
@@ -45,9 +69,22 @@ function ResultRow({ graph, person, mode, showBranchLink, onSelect, compact }: R
   );
 
   const rowClass = cn(
-    "flex w-full items-start gap-3 text-left transition-colors hover:bg-secondary/60",
+    "flex w-full items-start gap-3 text-left transition-colors",
     compact ? "px-3 py-2" : "px-4 py-3",
+    claimedByOther
+      ? "cursor-not-allowed opacity-60"
+      : mode === "button"
+        ? "hover:bg-secondary/60"
+        : "hover:bg-secondary/60",
   );
+
+  if (claimedByOther) {
+    return (
+      <div className={rowClass} aria-disabled title="Already linked to another account">
+        {inner}
+      </div>
+    );
+  }
 
   if (mode === "link") {
     return (
@@ -74,6 +111,8 @@ type Props = {
   compact?: boolean;
   className?: string;
   emptyMessage?: string;
+  claimedByPerson?: ReadonlyMap<string, string>;
+  currentUserId?: string | null;
 };
 
 export function PersonSearchResults({
@@ -86,6 +125,8 @@ export function PersonSearchResults({
   compact = false,
   className,
   emptyMessage = "No relative matches that name.",
+  claimedByPerson,
+  currentUserId = null,
 }: Props) {
   if (!results.length) {
     return <p className="px-3 py-2 text-sm text-muted-foreground">{emptyMessage}</p>;
@@ -108,6 +149,8 @@ export function PersonSearchResults({
             showBranchLink={showBranchLink}
             onSelect={onSelect}
             compact={compact}
+            claimedByPerson={claimedByPerson}
+            currentUserId={currentUserId}
           />
         </li>
       ))}

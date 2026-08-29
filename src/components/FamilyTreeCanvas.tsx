@@ -17,7 +17,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { PersonAvatarBadge } from "@/components/person-identity";
 import { cn } from "@/lib/utils";
-import type { FamilyGraph } from "@/lib/family";
+import { duplicateEffectiveNames, effectiveDisplayName, personContextLabel, type FamilyGraph } from "@/lib/family";
 import { branchColor } from "@/lib/colors";
 import type { FilterVisibility } from "@/lib/tree-filters";
 
@@ -27,6 +27,7 @@ const V_GAP = 160;
 
 export type TreeNodeData = {
   label: string;
+  contextLabel: string | null;
   childCount: number;
   hiddenChildren: boolean;
   expanded: boolean;
@@ -97,6 +98,11 @@ function PersonNode({ id, data }: NodeProps) {
         <span className="block truncate text-center font-display text-base font-semibold leading-tight">
           {d.label}
         </span>
+        {d.contextLabel && (
+          <span className="mt-0.5 block truncate text-center text-[10px] leading-tight text-muted-foreground">
+            {d.contextLabel}
+          </span>
+        )}
         <span className="mt-0.5 block text-center text-xs text-muted-foreground">
           {d.childCount === 0
             ? "No children recorded"
@@ -190,6 +196,7 @@ function buildFlow(
   filters: CanvasFilters | undefined,
   accentIds: Set<string> | undefined,
   accentEdgeIds: Set<string> | undefined,
+  duplicateNames: Set<string>,
 ): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
@@ -218,7 +225,8 @@ function buildFlow(
       type: "person",
       position: { x, y: depth * V_GAP },
       data: {
-        label: person?.display_name ?? "Unknown",
+        label: person ? effectiveDisplayName(graph, id) : "Unknown",
+        contextLabel: person ? personContextLabel(graph, id, duplicateNames) : null,
         childCount: allChildren.length,
         hiddenChildren: allChildren.length > 0 && !expanded.has(id),
         expanded: expanded.has(id),
@@ -294,6 +302,7 @@ function Canvas({
   accentEdgeIds,
   ariaLabel = "Family tree",
 }: Props) {
+  const duplicateNames = useMemo(() => duplicateEffectiveNames(graph), [graph]);
   const { nodes, edges } = useMemo(
     () =>
       buildFlow(
@@ -305,8 +314,9 @@ function Canvas({
         filters,
         accentIds,
         accentEdgeIds,
+        duplicateNames,
       ),
-    [graph, rootId, expanded, selectedId, focusedNodeId, filters, accentIds, accentEdgeIds],
+    [graph, rootId, expanded, selectedId, focusedNodeId, filters, accentIds, accentEdgeIds, duplicateNames],
   );
   const flow = useReactFlow();
   const containerRef = useRef<HTMLDivElement>(null);
