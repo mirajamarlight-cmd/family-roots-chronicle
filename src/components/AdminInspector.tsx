@@ -9,13 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -236,22 +230,25 @@ function InspectorBody({
               />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="gender">Gender</Label>
-              <Select
-                value={draft.gender || "unset"}
-                onValueChange={(value) =>
-                  onDraftChange({ ...draft, gender: value === "unset" ? "" : value })
-                }
+              <Label>Gender</Label>
+              <RadioGroup
+                value={draft.gender || undefined}
+                onValueChange={(value) => onDraftChange({ ...draft, gender: value })}
+                className="flex flex-wrap gap-x-5 gap-y-2"
               >
-                <SelectTrigger id="gender" className="bg-background">
-                  <SelectValue placeholder="Not set" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unset">Not set</SelectItem>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                </SelectContent>
-              </Select>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="male" id="gender-male" />
+                  <Label htmlFor="gender-male" className="cursor-pointer font-normal">
+                    Male
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="female" id="gender-female" />
+                  <Label htmlFor="gender-female" className="cursor-pointer font-normal">
+                    Female
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
           </div>
         </InspectorSection>
