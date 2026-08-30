@@ -9,6 +9,7 @@ import { AdminPeopleTree } from "@/components/AdminPeopleTree";
 import { AdminSubmissionQueue } from "@/components/AdminSubmissionQueue";
 import { AppShell } from "@/components/AppShell";
 import { AuthSignInCard } from "@/components/AuthSignInCard";
+import { FamilyAssistantChat } from "@/components/FamilyAssistantChat";
 import { PageHeader } from "@/components/PageHeader";
 import { PageState } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
@@ -317,6 +318,7 @@ function AdminPage() {
             />
           )}
         </div>
+        <FamilyAssistantChat selectedPersonId={selectedId} />
       </div>
     </AppShell>
   );
