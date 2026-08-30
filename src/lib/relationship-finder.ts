@@ -339,12 +339,15 @@ export function formatRelationshipBridge(graph: FamilyGraph, bridge: Relationshi
 
 export type RelationshipTreeView = {
   rootId: string;
-  /** Expanded through both paths — reveals full sibling groups at each level. */
+  /** Expanded along the connecting path only (not whole sibling groups). */
   expanded: Set<string>;
   /** Every person on either connecting path (LCA → A and LCA → B). */
   pathIds: Set<string>;
   /** Parent→child edges along those paths. */
   pathEdgeIds: Set<string>;
+  aId: string;
+  bId: string;
+  lcaId: string;
 };
 
 function pathEdgeIdsFrom(paths: string[][]): Set<string> {
@@ -357,11 +360,11 @@ function pathEdgeIdsFrom(paths: string[][]): Set<string> {
   return edges;
 }
 
-/** Tree rooted at the common ancestor, expanded along both paths (whole branch at each level). */
+/** Tree rooted at the common ancestor — path nodes only, no extra siblings. */
 export function buildRelationshipTreeView(
   result: Extract<RelationshipResult, { kind: "related" }>,
 ): RelationshipTreeView {
-  const { lcaId, pathFromLcaToA, pathFromLcaToB } = result;
+  const { lcaId, pathFromLcaToA, pathFromLcaToB, aId, bId } = result;
   const expanded = new Set<string>();
 
   for (const path of [pathFromLcaToA, pathFromLcaToB]) {
@@ -378,5 +381,19 @@ export function buildRelationshipTreeView(
     expanded,
     pathIds,
     pathEdgeIds,
+    aId,
+    bId,
+    lcaId,
   };
+}
+
+/** Person IDs left-to-right from A to B for linked path chips. */
+export function relationshipPathLinkIds(bridge: RelationshipBridge): string[] {
+  if (bridge.shape === "line") {
+    const ai = bridge.ids.indexOf(bridge.aId);
+    const bi = bridge.ids.indexOf(bridge.bId);
+    if (ai === -1 || bi === -1) return [...bridge.ids];
+    return ai <= bi ? bridge.ids.slice(ai, bi + 1) : bridge.ids.slice(bi, ai + 1).reverse();
+  }
+  return [...bridge.legA].reverse().concat(bridge.legB.slice(1));
 }

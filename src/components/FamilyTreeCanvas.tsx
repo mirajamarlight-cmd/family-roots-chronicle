@@ -197,6 +197,8 @@ type Props = {
   onToggleDeep?: ((id: string) => void) | undefined;
   accentIds?: Set<string> | undefined;
   accentEdgeIds?: Set<string> | undefined;
+  /** When set, only these nodes (and their path children) appear in the layout. */
+  visibleIds?: Set<string> | undefined;
   ariaLabel?: string | undefined;
 };
 
@@ -209,6 +211,7 @@ function buildFlow(
   filters: CanvasFilters | undefined,
   accentIds: Set<string> | undefined,
   accentEdgeIds: Set<string> | undefined,
+  visibleIds: Set<string> | undefined,
   duplicateNames: Set<string>,
 ): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = [];
@@ -220,7 +223,9 @@ function buildFlow(
   const layout = (id: string, depth: number): number => {
     if (placed.has(id)) return placedX.get(id)!;
 
-    const children = expanded.has(id) ? (graph.childrenOf.get(id) ?? []) : [];
+    const allChildren = graph.childrenOf.get(id) ?? [];
+    const pathChildren = visibleIds ? allChildren.filter((c) => visibleIds.has(c)) : allChildren;
+    const children = expanded.has(id) ? pathChildren : [];
     let x: number;
     if (children.length === 0) {
       x = cursor;
@@ -230,7 +235,7 @@ function buildFlow(
       x = (positions[0]! + positions[positions.length - 1]!) / 2;
     }
     const person = graph.byId.get(id);
-    const allChildren = graph.childrenOf.get(id) ?? [];
+    const shownChildCount = visibleIds ? pathChildren.length : allChildren.length;
     const filterActive = filters?.active ?? false;
     const dimmed = filterActive && !(filters?.selfMatch.has(id) ?? false);
     nodes.push({
@@ -240,8 +245,8 @@ function buildFlow(
       data: {
         label: person?.first_name ?? "Unknown",
         contextLabel: person ? personContextLabel(graph, id, duplicateNames) : null,
-        childCount: allChildren.length,
-        hiddenChildren: allChildren.length > 0 && !expanded.has(id),
+        childCount: shownChildCount,
+        hiddenChildren: shownChildCount > 0 && !expanded.has(id),
         expanded: expanded.has(id),
         selected: selectedId === id,
         focused: focusedNodeId === id,
@@ -315,6 +320,7 @@ function Canvas({
   onToggleDeep,
   accentIds,
   accentEdgeIds,
+  visibleIds,
   ariaLabel = "Family tree",
 }: Props) {
   const duplicateNames = useMemo(() => duplicateEffectiveNames(graph), [graph]);
@@ -329,9 +335,10 @@ function Canvas({
         filters,
         accentIds,
         accentEdgeIds,
+        visibleIds,
         duplicateNames,
       ),
-    [graph, rootId, expanded, selectedId, focusedNodeId, filters, accentIds, accentEdgeIds, duplicateNames],
+    [graph, rootId, expanded, selectedId, focusedNodeId, filters, accentIds, accentEdgeIds, visibleIds, duplicateNames],
   );
   const flow = useReactFlow();
   const containerRef = useRef<HTMLDivElement>(null);

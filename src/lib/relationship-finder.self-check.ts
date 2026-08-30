@@ -2,6 +2,8 @@ import {
   findRelationship,
   formatRelationshipSentence,
   formatRelationshipStory,
+  getRelationshipBridge,
+  relationshipPathLinkIds,
 } from "./relationship-finder.ts";
 import type { FamilyGraph, Link, Person } from "./family.ts";
 
@@ -149,6 +151,15 @@ if (!khedraHamdi.includes("Khedra is the daughter of Ahmed")) {
 }
 if (!khedraHamdi.includes("Hamdi is the son of Abdosh")) {
   throw new Error(`Nephew lineage missing in: ${khedraHamdi}`);
+}
+
+const cousinBridge = getRelationshipBridge(findRelationship(fixture, "hamdi", "ali"));
+if (!cousinBridge || cousinBridge.shape !== "fork") {
+  throw new Error("Expected fork bridge for cousins");
+}
+const cousinPath = relationshipPathLinkIds(cousinBridge);
+if (cousinPath.join(">") !== "hamdi>abdosh>ahmed>fatuma>ali") {
+  throw new Error(`Cousin path link order wrong: ${cousinPath.join(">")}`);
 }
 
 console.log("relationship-finder self-check passed");

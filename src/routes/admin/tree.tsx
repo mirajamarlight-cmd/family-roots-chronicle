@@ -32,6 +32,7 @@ function AdminTreePage() {
     openPerson,
     patchDraft,
     persistDeceased,
+    persistGender,
     startNew,
     closeEditor,
     save,
@@ -69,6 +70,7 @@ function AdminTreePage() {
             draft={draft}
             onDraftChange={patchDraft}
             onDeceasedChange={(next) => void persistDeceased(next)}
+            onGenderChange={(next) => void persistGender(next)}
             onSave={() => void save()}
             onDelete={
               editing

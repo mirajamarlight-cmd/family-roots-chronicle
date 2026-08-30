@@ -56,6 +56,24 @@ export function useAdminPersonEditor(graph: FamilyGraph | undefined) {
     [patchDraft, queryClient],
   );
 
+  const persistGender = useCallback(
+    async (next: PersonDraft) => {
+      patchDraft(next);
+      if (!next.id) return;
+      setBusy(true);
+      const gender = next.gender.trim() || null;
+      const { error } = await supabase.from("people").update({ gender }).eq("id", next.id);
+      setBusy(false);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      draftDirtyRef.current = false;
+      void queryClient.invalidateQueries({ queryKey: ["family-graph"] });
+    },
+    [patchDraft, queryClient],
+  );
+
   const startNew = useCallback((parentId: string) => {
     if (parentId) setSelectedId(parentId);
     setDraft({ ...emptyPersonDraft, parent_id: parentId });
@@ -181,6 +199,7 @@ export function useAdminPersonEditor(graph: FamilyGraph | undefined) {
     openPerson,
     patchDraft,
     persistDeceased,
+    persistGender,
     startNew,
     closeEditor,
     save,

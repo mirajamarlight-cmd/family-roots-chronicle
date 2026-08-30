@@ -40,7 +40,7 @@ export const emptyPersonDraft: PersonDraft = {
   first_name: "",
   middle_name: "",
   last_name: "",
-  gender: "",
+  gender: "male",
   birth_date: "",
   death_date: "",
   is_deceased: false,
@@ -116,6 +116,7 @@ function InspectorBody({
   draft,
   onDraftChange,
   onDeceasedChange,
+  onGenderChange,
   onSave,
   onDelete,
   onClose,
@@ -126,6 +127,7 @@ function InspectorBody({
   draft: PersonDraft;
   onDraftChange: (draft: PersonDraft) => void;
   onDeceasedChange: (draft: PersonDraft) => void;
+  onGenderChange: (draft: PersonDraft) => void;
   onSave: () => void;
   onDelete: (() => void) | undefined;
   onClose: () => void;
@@ -234,7 +236,7 @@ function InspectorBody({
               <RadioGroup
                 value={draft.gender || undefined}
                 onValueChange={(value) =>
-                  onDraftChange({ ...draft, gender: draft.gender === value ? "" : value })
+                  onGenderChange({ ...draft, gender: draft.gender === value ? "" : value })
                 }
                 className="flex flex-wrap gap-x-5 gap-y-2"
               >
@@ -242,10 +244,11 @@ function InspectorBody({
                   <RadioGroupItem
                     value="male"
                     id="gender-male"
+                    disabled={busy}
                     onPointerDown={(e) => {
                       if (draft.gender === "male") {
                         e.preventDefault();
-                        onDraftChange({ ...draft, gender: "" });
+                        onGenderChange({ ...draft, gender: "" });
                       }
                     }}
                   />
@@ -257,10 +260,11 @@ function InspectorBody({
                   <RadioGroupItem
                     value="female"
                     id="gender-female"
+                    disabled={busy}
                     onPointerDown={(e) => {
                       if (draft.gender === "female") {
                         e.preventDefault();
-                        onDraftChange({ ...draft, gender: "" });
+                        onGenderChange({ ...draft, gender: "" });
                       }
                     }}
                   />
@@ -371,6 +375,7 @@ export function AdminInspector({
   draft,
   onDraftChange,
   onDeceasedChange,
+  onGenderChange,
   onSave,
   onDelete,
   onClose,
@@ -380,6 +385,7 @@ export function AdminInspector({
   draft: PersonDraft;
   onDraftChange: (draft: PersonDraft) => void;
   onDeceasedChange: (draft: PersonDraft) => void;
+  onGenderChange: (draft: PersonDraft) => void;
   onSave: () => void;
   onDelete: (() => void) | undefined;
   onClose: () => void;
@@ -407,6 +413,7 @@ export function AdminInspector({
       draft={draft}
       onDraftChange={onDraftChange}
       onDeceasedChange={onDeceasedChange}
+      onGenderChange={onGenderChange}
       onSave={onSave}
       onDelete={onDelete}
       onClose={onClose}
