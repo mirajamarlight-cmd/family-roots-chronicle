@@ -86,3 +86,21 @@ export function ancestorsToExpand(
   }
   return [...ids];
 }
+
+/** Ancestors of each match only — keeps matches themselves collapsed. */
+export function ancestorsOnlyToExpand(
+  graph: FamilyGraph,
+  rootId: string,
+  matchIds: Iterable<string>,
+): string[] {
+  const ids = new Set<string>();
+  for (const matchId of matchIds) {
+    let current: string | undefined = graph.parentsOf.get(matchId)?.[0];
+    while (current) {
+      ids.add(current);
+      if (current === rootId) break;
+      current = graph.parentsOf.get(current)?.[0];
+    }
+  }
+  return [...ids];
+}

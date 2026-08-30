@@ -98,6 +98,15 @@ export async function fetchPendingSubmissions() {
   return data ?? [];
 }
 
+export async function fetchRegisteredMembers() {
+  const { data, error } = await supabase
+    .from("person_claims")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function approveSubmission(id: string) {
   const { data, error } = await supabase.rpc("approve_submission", { _id: id });
   if (error) throw error;

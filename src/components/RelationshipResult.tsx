@@ -7,7 +7,6 @@ import { RelationshipTreeView } from "@/components/RelationshipTreeView";
 import { Button } from "@/components/ui/button";
 import { effectiveDisplayName, type FamilyGraph } from "@/lib/family";
 import {
-  formatRelationshipSentence,
   formatRelationshipStory,
   getRelationshipBridge,
   type RelationshipResult,
@@ -42,7 +41,6 @@ export function RelationshipResultCard({
   graph: FamilyGraph;
   result: RelationshipResult;
 }) {
-  const sentence = formatRelationshipSentence(graph, result);
   const story = formatRelationshipStory(graph, result);
   const bridge = getRelationshipBridge(result);
   const personA = graph.byId.get(result.aId);
@@ -66,8 +64,6 @@ export function RelationshipResultCard({
           </div>
         </div>
       )}
-
-      <p className="text-center font-display text-lg font-semibold leading-snug sm:text-xl">{sentence}</p>
 
       {story.length > 0 && (
         <div className="space-y-2 rounded-xl border border-border bg-secondary/30 px-4 py-3">

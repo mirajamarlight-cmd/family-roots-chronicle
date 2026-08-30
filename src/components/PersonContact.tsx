@@ -21,7 +21,7 @@ export function PersonContact({ personId, className }: { personId: string; class
 
   return (
     <section className={className ?? "space-y-1.5"}>
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contact</h3>
+      <h3 className="font-display text-sm font-semibold tracking-tight">Contact</h3>
       {data.address && (
         <p className="flex items-start gap-2 text-sm">
           <MapPin className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" aria-hidden />

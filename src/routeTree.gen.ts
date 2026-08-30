@@ -10,20 +10,24 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as RelationshipRouteImport } from './routes/relationship'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as StatisticsRouteImport } from './routes/statistics'
 import { Route as TreeRouteImport } from './routes/tree'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminMembersRouteImport } from './routes/admin/members'
+import { Route as AdminSubmissionsRouteImport } from './routes/admin/submissions'
+import { Route as AdminTreeRouteImport } from './routes/admin/tree'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminRoute = AdminRouteImport.update({
+const AdminRouteRoute = AdminRouteRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => rootRouteImport,
@@ -58,37 +62,68 @@ const TreeRoute = TreeRouteImport.update({
   path: '/tree',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminMembersRoute = AdminMembersRouteImport.update({
+  id: '/members',
+  path: '/members',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminSubmissionsRoute = AdminSubmissionsRouteImport.update({
+  id: '/submissions',
+  path: '/submissions',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminTreeRoute = AdminTreeRouteImport.update({
+  id: '/tree',
+  path: '/tree',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/help': typeof HelpRoute
   '/join': typeof JoinRoute
   '/relationship': typeof RelationshipRoute
   '/search': typeof SearchRoute
   '/statistics': typeof StatisticsRoute
   '/tree': typeof TreeRoute
+  '/admin/members': typeof AdminMembersRoute
+  '/admin/submissions': typeof AdminSubmissionsRoute
+  '/admin/tree': typeof AdminTreeRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
   '/help': typeof HelpRoute
   '/join': typeof JoinRoute
   '/relationship': typeof RelationshipRoute
   '/search': typeof SearchRoute
   '/statistics': typeof StatisticsRoute
   '/tree': typeof TreeRoute
+  '/admin/members': typeof AdminMembersRoute
+  '/admin/submissions': typeof AdminSubmissionsRoute
+  '/admin/tree': typeof AdminTreeRoute
+  '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/help': typeof HelpRoute
   '/join': typeof JoinRoute
   '/relationship': typeof RelationshipRoute
   '/search': typeof SearchRoute
   '/statistics': typeof StatisticsRoute
   '/tree': typeof TreeRoute
+  '/admin/members': typeof AdminMembersRoute
+  '/admin/submissions': typeof AdminSubmissionsRoute
+  '/admin/tree': typeof AdminTreeRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,16 +136,23 @@ export interface FileRouteTypes {
     | '/search'
     | '/statistics'
     | '/tree'
+    | '/admin/members'
+    | '/admin/submissions'
+    | '/admin/tree'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/admin'
     | '/help'
     | '/join'
     | '/relationship'
     | '/search'
     | '/statistics'
     | '/tree'
+    | '/admin/members'
+    | '/admin/submissions'
+    | '/admin/tree'
+    | '/admin'
   id:
     | '__root__'
     | '/'
@@ -121,11 +163,15 @@ export interface FileRouteTypes {
     | '/search'
     | '/statistics'
     | '/tree'
+    | '/admin/members'
+    | '/admin/submissions'
+    | '/admin/tree'
+    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
   HelpRoute: typeof HelpRoute
   JoinRoute: typeof JoinRoute
   RelationshipRoute: typeof RelationshipRoute
@@ -147,7 +193,7 @@ declare module '@tanstack/react-router' {
       id: '/admin'
       path: '/admin'
       fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
+      preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/help': {
@@ -192,12 +238,58 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TreeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/members': {
+      id: '/admin/members'
+      path: '/members'
+      fullPath: '/admin/members'
+      preLoaderRoute: typeof AdminMembersRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/submissions': {
+      id: '/admin/submissions'
+      path: '/submissions'
+      fullPath: '/admin/submissions'
+      preLoaderRoute: typeof AdminSubmissionsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/tree': {
+      id: '/admin/tree'
+      path: '/tree'
+      fullPath: '/admin/tree'
+      preLoaderRoute: typeof AdminTreeRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
   }
 }
 
+interface AdminRouteRouteChildren {
+  AdminMembersRoute: typeof AdminMembersRoute
+  AdminSubmissionsRoute: typeof AdminSubmissionsRoute
+  AdminTreeRoute: typeof AdminTreeRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminMembersRoute: AdminMembersRoute,
+  AdminSubmissionsRoute: AdminSubmissionsRoute,
+  AdminTreeRoute: AdminTreeRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
+  AdminRouteRoute: AdminRouteRouteWithChildren,
   HelpRoute: HelpRoute,
   JoinRoute: JoinRoute,
   RelationshipRoute: RelationshipRoute,

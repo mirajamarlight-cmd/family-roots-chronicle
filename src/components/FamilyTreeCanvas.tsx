@@ -18,7 +18,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { DeceasedBadge } from "@/components/DeceasedBadge";
 import { PersonAvatarBadge } from "@/components/person-identity";
 import { cn } from "@/lib/utils";
-import { duplicateEffectiveNames, personContextLabel, personIsDeceased, type FamilyGraph } from "@/lib/family";
+import { duplicateEffectiveNames, personContextLabel, personIsDeceased, birthOrderAmongSiblings, type FamilyGraph } from "@/lib/family";
 import { branchColor } from "@/lib/colors";
 import type { FilterVisibility } from "@/lib/tree-filters";
 
@@ -40,6 +40,7 @@ export type TreeNodeData = {
   dimmed: boolean;
   matched: boolean;
   deceased: boolean;
+  birthOrder: number | null;
 };
 
 const TreeHandlersContext = createContext<{
@@ -98,6 +99,11 @@ function PersonNode({ id, data }: NodeProps) {
           <PersonAvatarBadge graph={handlers!.graph} personId={id} size={avatarSize} />
         </div>
         <span className="block truncate text-center font-display text-base font-semibold leading-tight">
+          {d.birthOrder != null && (
+            <span className="mr-1 inline-flex size-5 items-center justify-center rounded-full border border-border/70 bg-muted/80 align-middle font-mono text-[10px] font-semibold tabular-nums text-muted-foreground">
+              {d.birthOrder}
+            </span>
+          )}
           {d.label}
         </span>
         {d.deceased && (
@@ -245,6 +251,7 @@ function buildFlow(
         dimmed,
         matched: filters?.selfMatch.has(id) ?? false,
         deceased: person ? personIsDeceased(person) : false,
+        birthOrder: birthOrderAmongSiblings(graph, id),
       } satisfies TreeNodeData as unknown as Record<string, unknown>,
       draggable: false,
     });

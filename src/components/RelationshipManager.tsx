@@ -1,9 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { ChevronRight, GripVertical, Trash2 } from "lucide-react";
+import { type ReactNode, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { RelationshipPersonPicker } from "@/components/RelationshipPersonPicker";
+import { BirthOrderBadge } from "@/components/person-identity";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { effectiveDisplayName, type FamilyGraph } from "@/lib/family";
 import { siblingsOf } from "@/lib/family";
 import {
@@ -14,13 +17,137 @@ import {
   validateParentChild,
   validateSibling,
 } from "@/lib/relationships";
+import { cn } from "@/lib/utils";
+
+function RelationshipSection({
+  title,
+  count,
+  personId,
+  section,
+  children,
+}: {
+  title: string;
+  count: number;
+  personId: string;
+  section: string;
+  children: ReactNode;
+}) {
+  return (
+    <Collapsible key={`${section}-${personId}`} defaultOpen={false} className="overflow-hidden rounded-lg border border-border/60 bg-muted/20">
+      <CollapsibleTrigger className="group flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium hover:bg-muted/40">
+        <ChevronRight
+          className={cn("size-4 shrink-0 text-muted-foreground transition-transform", "group-data-[state=open]:rotate-90")}
+        />
+        <span className="flex-1">{title}</span>
+        <span className="rounded-full bg-background px-2 py-0.5 text-[11px] font-normal text-muted-foreground">
+          {count}
+        </span>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-2 border-t border-border/60 px-3 py-3">{children}</CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function ChildrenOrderList({
+  graph,
+  childIds,
+  onReorder,
+  onRemove,
+}: {
+  graph: FamilyGraph;
+  childIds: string[];
+  onReorder: (orderedIds: string[]) => void;
+  onRemove: (childId: string) => void;
+}) {
+  const [order, setOrder] = useState(childIds);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOrder(childIds);
+  }, [childIds]);
+
+  const commitReorder = (fromId: string, toId: string) => {
+    if (fromId === toId) return;
+    const next = [...order];
+    const from = next.indexOf(fromId);
+    const to = next.indexOf(toId);
+    if (from < 0 || to < 0) return;
+    next.splice(from, 1);
+    next.splice(to, 0, fromId);
+    setOrder(next);
+    onReorder(next);
+  };
+
+  if (order.length === 0) {
+    return <li className="text-sm text-muted-foreground">No recorded child.</li>;
+  }
+
+  return (
+    <>
+      {order.map((id, index) => (
+        <li
+          key={id}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (dragId && dragId !== id) setOverId(id);
+          }}
+          onDragLeave={() => setOverId((prev) => (prev === id ? null : prev))}
+          onDrop={(e) => {
+            e.preventDefault();
+            const fromId = e.dataTransfer.getData("text/plain") || dragId;
+            if (fromId) commitReorder(fromId, id);
+            setDragId(null);
+            setOverId(null);
+          }}
+          className={cn(
+            "flex items-center gap-1.5 rounded-md border border-transparent bg-background/80 px-1 text-sm transition-colors",
+            overId === id && "border-border bg-accent/60",
+            dragId === id && "opacity-50",
+          )}
+        >
+          <button
+            type="button"
+            draggable
+            aria-label={`Drag to reorder ${effectiveDisplayName(graph, id)}`}
+            className="flex size-8 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground active:cursor-grabbing"
+            onDragStart={(e) => {
+              e.dataTransfer.setData("text/plain", id);
+              e.dataTransfer.effectAllowed = "move";
+              setDragId(id);
+            }}
+            onDragEnd={() => {
+              setDragId(null);
+              setOverId(null);
+            }}
+          >
+            <GripVertical className="size-4" aria-hidden />
+          </button>
+          <BirthOrderBadge order={index + 1} />
+          <span className="min-w-0 flex-1 truncate">{effectiveDisplayName(graph, id)}</span>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-8 shrink-0"
+            aria-label="Remove child link"
+            onClick={() => onRemove(id)}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </li>
+      ))}
+    </>
+  );
+}
 
 export function RelationshipManager({
   graph,
   personId,
+  embedded = false,
 }: {
   graph: FamilyGraph;
   personId: string;
+  embedded?: boolean;
 }) {
   const queryClient = useQueryClient();
   const person = graph.byId.get(personId);
@@ -49,15 +176,6 @@ export function RelationshipManager({
     void run(() => addParentChild(parentId, personId), "Parent linked");
   };
 
-  const attachChild = (childId: string) => {
-    const check = validateParentChild(graph, personId, childId);
-    if (!check.ok) {
-      toast.error(check.reason);
-      return;
-    }
-    void run(() => addParentChild(personId, childId), "Child linked");
-  };
-
   const attachSibling = (siblingId: string) => {
     const check = validateSibling(graph, personId, siblingId);
     if (!check.ok) {
@@ -70,116 +188,80 @@ export function RelationshipManager({
   const detach = (parentId: string, childId: string) =>
     run(() => removeParentChild(parentId, childId), "Link removed");
 
-  const moveChild = (childId: string, direction: -1 | 1) => {
-    const ids = [...children];
-    const index = ids.indexOf(childId);
-    const next = index + direction;
-    if (index < 0 || next < 0 || next >= ids.length) return;
-    [ids[index], ids[next]] = [ids[next], ids[index]];
-    void run(() => setChildOrder(person.id, ids), "Birth order updated");
+  const reorderChildren = (ids: string[]) => {
+    if (ids.join(",") === children.join(",")) return;
+    void run(() => setChildOrder(personId, ids), "Birth order updated");
   };
 
   if (!person) return null;
 
   return (
-    <div className="space-y-5">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Relationships
-      </h3>
+    <div className={cn("space-y-3", !embedded && "space-y-5")}>
+      {!embedded && (
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Relationships
+        </h3>
+      )}
 
-      <section className="space-y-2">
-        <h4 className="text-sm font-medium">Parents ({parents.length}/2)</h4>
-        <ul className="space-y-1">
-          {parents.map((id) => (
-            <li key={id} className="flex items-center justify-between gap-2 text-sm">
-              <span>{effectiveDisplayName(graph, id)}</span>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="size-8"
-                aria-label="Remove parent link"
-                onClick={() => detach(id, person.id)}
+      <section className="overflow-hidden rounded-lg border border-border/60 bg-muted/20">
+        <div className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2.5">
+          <h4 className="text-sm font-medium">Parents</h4>
+          <span className="rounded-full bg-background px-2 py-0.5 text-[11px] text-muted-foreground">
+            {parents.length}/2
+          </span>
+        </div>
+        <div className="space-y-2 px-3 py-3">
+          <ul className="space-y-1">
+            {parents.map((id) => (
+              <li
+                key={id}
+                className="flex items-center justify-between gap-2 rounded-md border border-border/50 bg-background/80 px-2 py-1.5 text-sm"
               >
-                <Trash2 className="size-4" />
-              </Button>
-            </li>
-          ))}
-          {parents.length === 0 && (
-            <li className="text-sm text-muted-foreground">No recorded parent.</li>
-          )}
-        </ul>
-        {parents.length < 2 && (
-          <RelationshipPersonPicker
-            graph={graph}
-            label="Add a parent"
-            personId={null}
-            excludeId={person.id}
-            onSelect={attachParent}
-            onClear={() => undefined}
-            inline
-          />
-        )}
-      </section>
-
-      <section className="space-y-2">
-        <h4 className="text-sm font-medium">Children ({children.length})</h4>
-        <p className="text-xs text-muted-foreground">
-          Order by birthday when known; otherwise use arrows to set birth order.
-        </p>
-        <ul className="space-y-1">
-          {children.map((id, index) => (
-            <li key={id} className="flex items-center justify-between gap-2 text-sm">
-              <span className="min-w-0 truncate">{effectiveDisplayName(graph, id)}</span>
-              <div className="flex shrink-0 items-center gap-0.5">
+                <span className="min-w-0 truncate">{effectiveDisplayName(graph, id)}</span>
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="size-8"
-                  aria-label="Move earlier in birth order"
-                  disabled={index === 0}
-                  onClick={() => moveChild(id, -1)}
-                >
-                  <ChevronUp className="size-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="size-8"
-                  aria-label="Move later in birth order"
-                  disabled={index === children.length - 1}
-                  onClick={() => moveChild(id, 1)}
-                >
-                  <ChevronDown className="size-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="size-8"
-                  aria-label="Remove child link"
-                  onClick={() => detach(person.id, id)}
+                  className="size-8 shrink-0"
+                  aria-label="Remove parent link"
+                  onClick={() => detach(id, person.id)}
                 >
                   <Trash2 className="size-4" />
                 </Button>
-              </div>
-            </li>
-          ))}
-          {children.length === 0 && (
-            <li className="text-sm text-muted-foreground">No recorded child.</li>
+              </li>
+            ))}
+            {parents.length === 0 && (
+              <li className="text-sm text-muted-foreground">No recorded parent.</li>
+            )}
+          </ul>
+          {parents.length < 2 && (
+            <RelationshipPersonPicker
+              graph={graph}
+              label="Add a parent"
+              personId={null}
+              excludeId={person.id}
+              onSelect={attachParent}
+              onClear={() => undefined}
+              inline
+            />
           )}
-        </ul>
-        <RelationshipPersonPicker
-          graph={graph}
-          label="Link an existing child"
-          personId={null}
-          excludeId={person.id}
-          onSelect={attachChild}
-          onClear={() => undefined}
-          inline
-        />
+        </div>
       </section>
 
-      <section className="space-y-2">
-        <h4 className="text-sm font-medium">Siblings ({siblings.length})</h4>
+      <RelationshipSection title="Children" count={children.length} personId={person.id} section="children">
+        <p className="text-xs text-muted-foreground">
+          Order by birthday when known; otherwise drag the handle to set birth order.
+        </p>
+        <ul className="space-y-1">
+          <ChildrenOrderList
+            graph={graph}
+            childIds={children}
+            onReorder={reorderChildren}
+            onRemove={(childId) => detach(person.id, childId)}
+          />
+        </ul>
+      </RelationshipSection>
+
+      <RelationshipSection title="Siblings" count={siblings.length} personId={person.id} section="siblings">
         <ul className="space-y-1">
           {siblings.map((id) => (
             <li key={id} className="text-sm">
@@ -205,7 +287,7 @@ export function RelationshipManager({
             inline
           />
         )}
-      </section>
+      </RelationshipSection>
     </div>
   );
 }

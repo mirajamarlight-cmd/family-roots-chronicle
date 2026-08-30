@@ -1,4 +1,4 @@
-import { Maximize2, Minimize2, Search, SlidersHorizontal, UserPlus } from "lucide-react";
+import { Maximize2, Minimize2, Plus, Search, SlidersHorizontal, UserPlus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AccessibleFamilyTree } from "@/components/AccessibleFamilyTree";
@@ -23,7 +23,11 @@ import {
   maxGeneration,
   type FamilyGraph,
 } from "@/lib/family";
-import { ancestorsToExpand, computeVisibility } from "@/lib/tree-filters";
+import { ancestorsOnlyToExpand, computeVisibility } from "@/lib/tree-filters";
+import { cn } from "@/lib/utils";
+
+const chip =
+  "shrink-0 rounded-full border border-border bg-card/90 backdrop-blur transition-colors";
 
 function adminDefaultExpanded(graph: FamilyGraph, rootId: string): Set<string> {
   const next = new Set([rootId]);
@@ -36,9 +40,18 @@ type Props = {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onAddChild: (parentId: string) => void;
+  onAddPerson: () => void;
+  addPersonLabel: string;
 };
 
-export function AdminPeopleTree({ graph, selectedId, onSelect, onAddChild }: Props) {
+export function AdminPeopleTree({
+  graph,
+  selectedId,
+  onSelect,
+  onAddChild,
+  onAddPerson,
+  addPersonLabel,
+}: Props) {
   const isMobile = useIsMobile();
   const rootId = canonicalRootId(graph);
   const [expanded, setExpanded] = useState<Set<string>>(() =>
@@ -79,16 +92,20 @@ export function AdminPeopleTree({ graph, selectedId, onSelect, onAddChild }: Pro
     if (!filterVisibility.active) return;
     const next: string[] = [];
     for (const r of [rootId, ...extraRoots]) {
-      if (r) next.push(...ancestorsToExpand(graph, r, filterVisibility.selfMatch));
+      if (r) next.push(...ancestorsOnlyToExpand(graph, r, filterVisibility.selfMatch));
     }
-    setExpanded((prev) => new Set([...prev, ...next]));
-  }, [graph, rootId, extraRoots, filterVisibility.active, matchKey]);
+    setExpanded((prev) => {
+      const merged = new Set([...prev, ...next]);
+      for (const id of filterVisibility.selfMatch) merged.delete(id);
+      return merged;
+    });
+  }, [graph, rootId, extraRoots, filterVisibility.active, filterVisibility.selfMatch, matchKey]);
 
   useEffect(() => {
     if (!selectedId) return;
     const roots = [rootId, ...extraRoots].filter((id): id is string => !!id);
-    const next: string[] = [selectedId];
-    for (const r of roots) next.push(...ancestorsToExpand(graph, r, [selectedId]));
+    const next: string[] = [];
+    for (const r of roots) next.push(...ancestorsOnlyToExpand(graph, r, [selectedId]));
     setExpanded((prev) => new Set([...prev, ...next]));
   }, [graph, rootId, extraRoots, selectedId]);
 
@@ -124,8 +141,8 @@ export function AdminPeopleTree({ graph, selectedId, onSelect, onAddChild }: Pro
   const focusPerson = useCallback(
     (id: string) => {
       const roots = [rootId, ...extraRoots].filter((id): id is string => !!id);
-      const next: string[] = [id];
-      for (const r of roots) next.push(...ancestorsToExpand(graph, r, [id]));
+      const next: string[] = [];
+      for (const r of roots) next.push(...ancestorsOnlyToExpand(graph, r, [id]));
       setExpanded((prev) => new Set([...prev, ...next]));
       setFocusedId(id);
       onSelect(id);
@@ -142,12 +159,12 @@ export function AdminPeopleTree({ graph, selectedId, onSelect, onAddChild }: Pro
     (id: string) => (
       <Button
         size="icon"
-        variant="ghost"
-        className="size-8"
+        variant="outline"
+        className="size-7 rounded-full opacity-70 hover:opacity-100"
         aria-label="Add child"
         onClick={() => onAddChild(id)}
       >
-        <UserPlus className="size-4" />
+        <UserPlus className="size-3.5" />
       </Button>
     ),
     [onAddChild],
@@ -160,7 +177,7 @@ export function AdminPeopleTree({ graph, selectedId, onSelect, onAddChild }: Pro
     visible: listVisible,
     selfMatch: filterVisibility.selfMatch,
     selectedId,
-    focusedId: focusedId ?? selectedId ?? rootId,
+    focusedId: focusedId ?? rootId,
     query: debouncedQuery,
     onSelect,
     onFocusId: setFocusedId,
@@ -174,10 +191,10 @@ export function AdminPeopleTree({ graph, selectedId, onSelect, onAddChild }: Pro
 
   const expandCollapseButtons = (
     <div className="flex flex-wrap gap-2">
-      <Button size="sm" variant="outline" className="rounded-full text-xs" onClick={expandAll}>
+      <Button size="sm" variant="outline" className={cn(chip, "text-xs")} onClick={expandAll}>
         <Maximize2 className="size-3.5" /> Expand all
       </Button>
-      <Button size="sm" variant="outline" className="rounded-full text-xs" onClick={collapse}>
+      <Button size="sm" variant="outline" className={cn(chip, "text-xs")} onClick={collapse}>
         <Minimize2 className="size-3.5" /> Collapse
       </Button>
     </div>
@@ -219,13 +236,29 @@ export function AdminPeopleTree({ graph, selectedId, onSelect, onAddChild }: Pro
   );
 
   if (!rootId) {
-    return <p className="p-4 text-sm text-muted-foreground">No people in the tree yet.</p>;
+    return (
+      <div className="mx-auto max-w-md p-8 text-center">
+        <p className="font-display text-base font-semibold">No people yet</p>
+        <p className="mt-2 text-sm text-muted-foreground">Use the + button in the toolbar to add someone.</p>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-3 p-3 sm:p-4">
+    <div className="mx-auto max-w-4xl space-y-2 p-2 sm:p-3">
+      <div className={cn("sticky top-0 z-20 space-y-2 bg-muted/10 pb-2 pt-1 backdrop-blur sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card/80 sm:p-3 sm:shadow-sm")}>
       <div className="flex items-center gap-2 sm:hidden">
         <TreePersonSearch graph={graph} onSelectPerson={focusPerson} placeholder="Find someone…" />
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          aria-label={addPersonLabel}
+          className="size-9 shrink-0 rounded-full"
+          onClick={onAddPerson}
+        >
+          <Plus className="size-4" />
+        </Button>
         <Sheet open={optionsOpen} onOpenChange={setOptionsOpen}>
           <SheetTrigger asChild>
             <Button
@@ -258,15 +291,20 @@ export function AdminPeopleTree({ graph, selectedId, onSelect, onAddChild }: Pro
           <BranchPicker branches={branches} value={branchId} onChange={setBranchId} />
         )}
         {filterMeta}
+        <Button size="sm" className={cn(chip, "text-xs")} onClick={onAddPerson}>
+          <Plus className="size-3.5" aria-hidden />
+          {addPersonLabel}
+        </Button>
         <div className="ml-auto">{expandCollapseButtons}</div>
       </div>
 
-      <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 pb-0.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+      <div className="flex gap-1.5 overflow-x-auto pb-0.5 sm:flex-wrap sm:overflow-visible">
         <GenerationPills maxGen={maxGen} gen={gen} onGenChange={setGen} />
         {isMobile && filterMeta}
       </div>
+      </div>
 
-      <div className="rounded-2xl border border-border bg-card/80 p-4 leaf-shadow sm:p-5">
+      <div className="rounded-2xl border border-border/70 bg-card/80 p-4 leaf-shadow sm:p-5">
         <div className="mb-4 flex flex-wrap items-center gap-2 border-b border-border/60 pb-4">
           <div className="relative min-w-[140px] flex-1">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

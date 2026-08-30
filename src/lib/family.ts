@@ -327,6 +327,14 @@ export function siblingsOf(graph: FamilyGraph, id: string): string[] {
   return [...result];
 }
 
+/** 1-based order among a parent's children (after birth-date / child_order sort). */
+export function birthOrderAmongSiblings(graph: FamilyGraph, id: string): number | null {
+  const parentId = graph.parentsOf.get(id)?.[0];
+  if (!parentId) return null;
+  const idx = (graph.childrenOf.get(parentId) ?? []).indexOf(id);
+  return idx >= 0 ? idx + 1 : null;
+}
+
 /** Lowercase haystack for substring name search (first, middle, last, display, effective). */
 export function personSearchHaystack(graph: FamilyGraph, id: string): string {
   const p = graph.byId.get(id);

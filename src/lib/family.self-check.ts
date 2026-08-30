@@ -229,4 +229,19 @@ const twoParents = testGraph(
 );
 expectName("two parents uses father toward root", twoParents, "child", "Amar Teweleda Abdosh");
 
+const orderGraph = testGraph(
+  [person("p", "Parent"), person("a", "A"), person("b", "B"), person("c", "C")],
+  [link("p", "a"), link("p", "b"), link("p", "c")],
+);
+// ponytail: mirror birthOrderAmongSiblings — keep self-check free of supabase import
+function birthOrderLocal(g: FamilyGraph, id: string): number | null {
+  const parentId = g.parentsOf.get(id)?.[0];
+  if (!parentId) return null;
+  const idx = (g.childrenOf.get(parentId) ?? []).indexOf(id);
+  return idx >= 0 ? idx + 1 : null;
+}
+console.assert(birthOrderLocal(orderGraph, "a") === 1, "first sibling order");
+console.assert(birthOrderLocal(orderGraph, "c") === 3, "third sibling order");
+console.assert(birthOrderLocal(orderGraph, "p") === null, "root has no sibling order");
+
 console.log("family.self-check: all patronymic scenarios passed");

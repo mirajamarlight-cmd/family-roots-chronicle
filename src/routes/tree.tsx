@@ -316,7 +316,7 @@ function TreePage() {
 
   return (
     <AppShell wide>
-      <div className="tree-page flex flex-col overflow-hidden">
+      <div className="tree-page flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="sr-only" aria-live="polite" aria-atomic="true">
           {liveMessage}
         </div>

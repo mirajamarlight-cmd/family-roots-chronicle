@@ -87,3 +87,24 @@ export function PersonAvatarBadge({
     </span>
   );
 }
+
+export function BirthOrderBadge({
+  order,
+  className,
+}: {
+  order: number;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "flex size-5 shrink-0 items-center justify-center rounded-full border border-border/70 bg-muted/80 font-mono text-[10px] font-semibold tabular-nums text-muted-foreground",
+        className,
+      )}
+      aria-label={`Family order ${order}`}
+      title={`Birth order: ${order}`}
+    >
+      {order}
+    </span>
+  );
+}

@@ -53,7 +53,7 @@ export function AppShell({ children, wide }: { children: ReactNode; wide?: boole
   const navigate = useNavigate();
 
   return (
-    <div className="flex min-h-[100dvh] flex-col parchment">
+    <div className={cn("flex min-h-[100dvh] flex-col parchment", wide && "h-[100dvh] max-h-[100dvh] overflow-hidden")}>
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-2 px-4 py-3">
           <Link
@@ -146,7 +146,7 @@ export function AppShell({ children, wide }: { children: ReactNode; wide?: boole
       <main
         className={
           wide
-            ? "flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0"
+            ? "flex h-full min-h-0 flex-1 flex-col overflow-hidden pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0"
             : "mx-auto w-full max-w-7xl flex-1 px-4 py-6 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:py-8 md:pb-8"
         }
       >

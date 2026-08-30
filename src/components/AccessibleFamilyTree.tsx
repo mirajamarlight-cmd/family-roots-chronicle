@@ -1,8 +1,8 @@
 import { ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 
-import { PersonAvatarBadge } from "@/components/person-identity";
-import { descendantCount, duplicateEffectiveNames, effectiveDisplayName, personContextLabel, type FamilyGraph } from "@/lib/family";
+import { PersonAvatarBadge, BirthOrderBadge } from "@/components/person-identity";
+import { descendantCount, duplicateEffectiveNames, effectiveDisplayName, birthOrderAmongSiblings, personContextLabel, type FamilyGraph } from "@/lib/family";
 import { cn } from "@/lib/utils";
 
 export function highlightName(name: string, query: string) {
@@ -41,6 +41,19 @@ type TreeItemProps = {
   duplicateNames?: Set<string> | undefined;
 };
 
+function isTreeNodeShown(
+  graph: FamilyGraph,
+  id: string,
+  visible: Set<string>,
+  expanded: Set<string>,
+  selfMatch: Set<string>,
+): boolean {
+  if (visible.has(id)) return true;
+  const parent = graph.parentsOf.get(id)?.[0];
+  // ponytail: only a filter match's expanded branch reveals non-matching children
+  return !!(parent && expanded.has(parent) && selfMatch.has(parent));
+}
+
 function TreeItem({
   graph,
   id,
@@ -59,7 +72,7 @@ function TreeItem({
   renderEnd,
   duplicateNames,
 }: TreeItemProps) {
-  if (!visible.has(id)) return null;
+  if (!isTreeNodeShown(graph, id, visible, expanded, selfMatch)) return null;
 
   const person = graph.byId.get(id);
   if (!person) return null;
@@ -72,6 +85,7 @@ function TreeItem({
   const isFocused = focusedId === id;
   const isSelected = selectedId === id;
   const contextLabel = duplicateNames ? personContextLabel(graph, id, duplicateNames) : null;
+  const birthOrder = birthOrderAmongSiblings(graph, id);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     const idx = orderedIds.indexOf(id);
@@ -141,6 +155,8 @@ function TreeItem({
             />
           )}
         </span>
+
+        {birthOrder != null && <BirthOrderBadge order={birthOrder} />}
 
         <PersonAvatarBadge graph={graph} personId={id} size="sm" />
 
@@ -215,10 +231,11 @@ function collectVisibleOrdered(
   rootId: string,
   expanded: Set<string>,
   visible: Set<string>,
+  selfMatch: Set<string>,
 ): string[] {
   const result: string[] = [];
   const walk = (id: string) => {
-    if (!visible.has(id)) return;
+    if (!isTreeNodeShown(graph, id, visible, expanded, selfMatch)) return;
     result.push(id);
     if (expanded.has(id)) {
       for (const child of graph.childrenOf.get(id) ?? []) walk(child);
@@ -266,8 +283,8 @@ export function AccessibleFamilyTree({
   const duplicateNames = useMemo(() => duplicateEffectiveNames(graph), [graph]);
 
   const orderedIds = useMemo(
-    () => collectVisibleOrdered(graph, rootId, expanded, visible),
-    [graph, rootId, expanded, visible],
+    () => collectVisibleOrdered(graph, rootId, expanded, visible, selfMatch),
+    [graph, rootId, expanded, visible, selfMatch],
   );
 
   const setItemRef = useCallback((id: string, el: HTMLLIElement | null) => {
@@ -279,7 +296,7 @@ export function AccessibleFamilyTree({
     (id: string) => {
       onFocusId?.(id);
       requestAnimationFrame(() => {
-        itemRefs.current.get(id)?.querySelector<HTMLElement>("[tabindex]")?.focus();
+        itemRefs.current.get(id)?.querySelector<HTMLElement>("[tabindex]")?.focus({ preventScroll: true });
       });
     },
     [onFocusId],
@@ -288,7 +305,7 @@ export function AccessibleFamilyTree({
   useEffect(() => {
     if (!focusedId) return;
     requestAnimationFrame(() => {
-      itemRefs.current.get(focusedId)?.querySelector<HTMLElement>("[tabindex]")?.focus();
+      itemRefs.current.get(focusedId)?.querySelector<HTMLElement>("[tabindex]")?.focus({ preventScroll: true });
     });
   }, [focusedId]);
 
