@@ -1,10 +1,14 @@
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import type { Database } from "@/integrations/supabase/types";
+import type { AssistantAction } from "@/lib/family-assistant-actions";
+import { ADMIN_TOOL_DEFINITIONS, runAdminAssistantTool } from "@/lib/family-assistant-admin.server";
 import {
   ASSISTANT_TOOL_DEFINITIONS,
   runAssistantTool,
   type AssistantToolName,
 } from "@/lib/family-assistant-tools";
-import { fetchFamilyGraphServer } from "@/lib/family-graph.server";
+import { fetchFamilyGraphWithClient } from "@/lib/family-graph.server";
 import { effectiveDisplayName, type FamilyGraph } from "@/lib/family";
 
 export type AssistantChatMessage = {
@@ -15,6 +19,11 @@ export type AssistantChatMessage = {
 export type AssistantChatContext = {
   selectedPersonId?: string | null;
   pendingSubmissionCount?: number;
+};
+
+export type AssistantChatResult = {
+  reply: string;
+  actions: AssistantAction[];
 };
 
 type OpenAiMessage =
@@ -30,7 +39,16 @@ type OpenAiMessage =
     }
   | { role: "tool"; tool_call_id: string; content: string };
 
-const MAX_TOOL_ROUNDS = 6;
+const READ_TOOL_NAMES = new Set<string>([
+  "search_people",
+  "get_person",
+  "find_relationship",
+  "get_lineage",
+  "get_tree_stats",
+  "get_family_history",
+]);
+
+const MAX_TOOL_ROUNDS = 8;
 
 function llmConfig(): { apiKey: string; baseUrl: string; model: string } {
   const groqKey = process.env.GROQ_API_KEY?.trim();
@@ -69,28 +87,14 @@ function buildSystemPrompt(graph: FamilyGraph, ctx?: AssistantChatContext): stri
     "Answer using tool results and documented family history only. Never invent people, dates, or relationships.",
     "Patronymic names are common (e.g. Abdosh Ahmed means Abdosh son of Ahmed). Use search_people when a name might match several people.",
     "Be concise, accurate, and warm. Refer to people by the names returned from tools.",
-    "You cannot edit the tree yet — help explore, explain relationships, and summarize the record.",
-    "Do not share private contact details (email, phone, address) from join submissions.",
+    "For writes (approve, reject, add child, update person), always use prepare_* tools first — never claim a change is done until the admin clicks the confirm button.",
+    "Use select_person_in_admin to open someone in the editor. Use match_submission_to_tree before approving when duplicates are possible.",
+    "Do not share private contact details (email, phone, address) from join submissions unless the admin explicitly asks.",
     selected ? `The admin currently has "${selected}" selected in the editor.` : "No person is selected in the admin editor.",
     pending != null ? `${pending} submission(s) are waiting for admin approval.` : "",
   ]
     .filter(Boolean)
     .join("\n");
-}
-
-async function listPendingSubmissionsSummary() {
-  const { data, error } = await supabaseAdmin
-    .from("person_submissions")
-    .select("id, kind, first_name, middle_name, last_name, created_at, status")
-    .eq("status", "pending")
-    .order("created_at");
-  if (error) throw error;
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    kind: row.kind,
-    name: [row.first_name, row.middle_name, row.last_name].filter(Boolean).join(" "),
-    created_at: row.created_at,
-  }));
 }
 
 async function callLlm(messages: OpenAiMessage[]) {
@@ -104,17 +108,7 @@ async function callLlm(messages: OpenAiMessage[]) {
     body: JSON.stringify({
       model,
       messages,
-      tools: [
-        ...ASSISTANT_TOOL_DEFINITIONS,
-        {
-          type: "function",
-          function: {
-            name: "list_pending_submissions",
-            description: "List join/edit submissions waiting for admin approval.",
-            parameters: { type: "object", properties: {} },
-          },
-        },
-      ],
+      tools: [...ASSISTANT_TOOL_DEFINITIONS, ...ADMIN_TOOL_DEFINITIONS],
       tool_choice: "auto",
     }),
   });
@@ -133,10 +127,12 @@ async function callLlm(messages: OpenAiMessage[]) {
 }
 
 export async function runFamilyAssistant(
+  supabase: SupabaseClient<Database>,
   messages: AssistantChatMessage[],
   ctx?: AssistantChatContext,
-): Promise<string> {
-  const graph = await fetchFamilyGraphServer();
+): Promise<AssistantChatResult> {
+  const graph = await fetchFamilyGraphWithClient(supabase);
+  const actions: AssistantAction[] = [];
   const openAiMessages: OpenAiMessage[] = [
     { role: "system", content: buildSystemPrompt(graph, ctx) },
     ...messages.map((m) => ({ role: m.role, content: m.content })),
@@ -150,7 +146,7 @@ export async function runFamilyAssistant(
     if (!toolCalls) {
       const text = assistant.content?.trim();
       if (!text) throw new Error("Assistant returned no text.");
-      return text;
+      return { reply: text, actions };
     }
 
     openAiMessages.push(assistant);
@@ -164,12 +160,9 @@ export async function runFamilyAssistant(
         args = {};
       }
 
-      let result: unknown;
-      if (name === "list_pending_submissions") {
-        result = { submissions: await listPendingSubmissionsSummary() };
-      } else {
-        result = runAssistantTool(graph, name as AssistantToolName, args);
-      }
+      const result = READ_TOOL_NAMES.has(name)
+        ? runAssistantTool(graph, name as AssistantToolName, args)
+        : await runAdminAssistantTool(supabase, graph, name, args, actions);
 
       openAiMessages.push({
         role: "tool",

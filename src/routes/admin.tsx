@@ -318,7 +318,7 @@ function AdminPage() {
             />
           )}
         </div>
-        <FamilyAssistantChat selectedPersonId={selectedId} />
+        <FamilyAssistantChat selectedPersonId={selectedId} onOpenPerson={openPerson} />
       </div>
     </AppShell>
   );

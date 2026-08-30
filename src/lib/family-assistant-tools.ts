@@ -114,7 +114,7 @@ export const ASSISTANT_TOOL_DEFINITIONS = [
 
 type PersonMatch = { id: string; name: string; lineage: string };
 
-function resolvePerson(
+export function resolvePersonQuery(
   graph: FamilyGraph,
   query: string,
 ): { ok: true; id: string } | { ok: false; error: string; matches?: PersonMatch[] } {
@@ -199,14 +199,14 @@ export function runAssistantTool(
       };
     }
     case "get_person": {
-      const resolved = resolvePerson(graph, String(args.query ?? ""));
+      const resolved = resolvePersonQuery(graph, String(args.query ?? ""));
       if (!resolved.ok) return resolved;
       return personSummary(graph, resolved.id);
     }
     case "find_relationship": {
-      const a = resolvePerson(graph, String(args.person_a ?? ""));
+      const a = resolvePersonQuery(graph, String(args.person_a ?? ""));
       if (!a.ok) return { person: "person_a", ...a };
-      const b = resolvePerson(graph, String(args.person_b ?? ""));
+      const b = resolvePersonQuery(graph, String(args.person_b ?? ""));
       if (!b.ok) return { person: "person_b", ...b };
       const result = findRelationship(graph, a.id, b.id);
       return {
@@ -215,7 +215,7 @@ export function runAssistantTool(
       };
     }
     case "get_lineage": {
-      const resolved = resolvePerson(graph, String(args.query ?? ""));
+      const resolved = resolvePersonQuery(graph, String(args.query ?? ""));
       if (!resolved.ok) return resolved;
       const chain = lineageChain(graph, resolved.id);
       return {

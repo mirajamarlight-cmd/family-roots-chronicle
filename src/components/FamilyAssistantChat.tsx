@@ -1,5 +1,5 @@
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, MessageSquare, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -14,33 +14,40 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import type { AssistantAction } from "@/lib/family-assistant-actions";
 import { familyAssistantChat } from "@/lib/family-assistant.functions";
+import { familyAssistantExecute } from "@/lib/family-assistant-execute.functions";
 import { fetchPendingSubmissions } from "@/lib/submissions";
 import { cn } from "@/lib/utils";
 
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
+  actions?: AssistantAction[];
+  doneActionIds?: string[];
 };
 
 const WELCOME: ChatMessage = {
   role: "assistant",
   content:
-    "Ask me about people, relationships, lineage, or pending join requests. I use the live family record — I won't guess.",
+    "Ask about the tree, review submissions, or ask me to prepare changes. Writes need your confirm click.",
 };
 
 const STARTER_PROMPTS = [
-  "How is the tree organized?",
   "What's waiting for approval?",
   "Who has duplicate names?",
+  "Open the selected person",
 ] as const;
 
 type FamilyAssistantChatProps = {
   selectedPersonId?: string | null;
+  onOpenPerson?: (personId: string) => void;
 };
 
-export function FamilyAssistantChat({ selectedPersonId }: FamilyAssistantChatProps) {
+export function FamilyAssistantChat({ selectedPersonId, onOpenPerson }: FamilyAssistantChatProps) {
   const chatFn = useServerFn(familyAssistantChat);
+  const executeFn = useServerFn(familyAssistantExecute);
+  const queryClient = useQueryClient();
   const pendingQuery = useQuery({
     queryKey: ["pending-submissions"],
     queryFn: fetchPendingSubmissions,
@@ -58,36 +65,66 @@ export function FamilyAssistantChat({ selectedPersonId }: FamilyAssistantChatPro
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [displayMessages, busy]);
 
+  const applyOpenActions = (actions: AssistantAction[]) => {
+    for (const action of actions) {
+      if (action.type === "open_person") onOpenPerson?.(action.personId);
+    }
+  };
+
   const send = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || busy) return;
 
-    const apiMessages: ChatMessage[] = [...messages, { role: "user", content: trimmed }];
-    setMessages(apiMessages);
+    const apiMessages = messages.map(({ role, content }) => ({ role, content }));
+    const nextApi = [...apiMessages, { role: "user" as const, content: trimmed }];
+    setMessages((prev) => [...prev, { role: "user", content: trimmed }]);
     setInput("");
     setBusy(true);
 
     try {
       const result = await chatFn({
         data: {
-          messages: apiMessages,
+          messages: nextApi,
           context: {
             selectedPersonId: selectedPersonId ?? null,
             pendingSubmissionCount: pendingQuery.data?.length ?? 0,
           },
         },
       });
-      setMessages((prev) => [...prev, { role: "assistant", content: result.reply }]);
+      applyOpenActions(result.actions);
+      const confirmActions = result.actions.filter((a) => a.type === "confirm");
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: result.reply, actions: confirmActions },
+      ]);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Assistant request failed";
       toast.error(message);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Sorry — I couldn't reach the assistant. Set GROQ_API_KEY (or OPENAI_API_KEY) in your server .env and restart.",
-        },
-      ]);
+      setMessages((prev) => [...prev, { role: "assistant", content: message }]);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const runConfirm = async (messageIndex: number, action: Extract<AssistantAction, { type: "confirm" }>) => {
+    setBusy(true);
+    try {
+      const result = await executeFn({
+        data: { kind: action.kind, payload: action.payload },
+      });
+      toast.success(result.message);
+      await queryClient.invalidateQueries({ queryKey: ["pending-submissions"] });
+      await queryClient.invalidateQueries({ queryKey: ["family-graph"] });
+      if (result.personId) onOpenPerson?.(result.personId);
+      setMessages((prev) =>
+        prev.map((m, i) =>
+          i === messageIndex
+            ? { ...m, doneActionIds: [...(m.doneActionIds ?? []), action.id] }
+            : m,
+        ),
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Action failed");
     } finally {
       setBusy(false);
     }
@@ -108,22 +145,39 @@ export function FamilyAssistantChat({ selectedPersonId }: FamilyAssistantChatPro
         <SheetHeader className="border-b border-border px-4 py-4 pr-12 text-left">
           <SheetTitle>Family assistant</SheetTitle>
           <SheetDescription>
-            Answers from the live tree and family history. Read-only for now.
+            Explore the tree, review submissions, and prepare edits — confirm before anything saves.
           </SheetDescription>
         </SheetHeader>
 
         <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
           {displayMessages.map((message, index) => (
-            <div
-              key={`${message.role}-${index}`}
-              className={cn(
-                "max-w-[92%] rounded-2xl px-3 py-2 text-sm leading-relaxed",
-                message.role === "user"
-                  ? "ml-auto bg-primary text-primary-foreground"
-                  : "bg-secondary text-secondary-foreground",
-              )}
-            >
-              {message.content}
+            <div key={`${message.role}-${index}`} className="space-y-2">
+              <div
+                className={cn(
+                  "max-w-[92%] rounded-2xl px-3 py-2 text-sm leading-relaxed",
+                  message.role === "user"
+                    ? "ml-auto bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground",
+                )}
+              >
+                {message.content}
+              </div>
+              {message.actions?.map((action) => {
+                if (action.type !== "confirm") return null;
+                const done = message.doneActionIds?.includes(action.id);
+                return (
+                  <Button
+                    key={action.id}
+                    size="sm"
+                    variant={action.kind.includes("reject") ? "outline" : "default"}
+                    disabled={busy || done}
+                    className="mr-2"
+                    onClick={() => void runConfirm(index, action)}
+                  >
+                    {done ? "Done" : action.label}
+                  </Button>
+                );
+              })}
             </div>
           ))}
           {busy && (
