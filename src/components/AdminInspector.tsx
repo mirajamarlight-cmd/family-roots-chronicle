@@ -233,17 +233,37 @@ function InspectorBody({
               <Label>Gender</Label>
               <RadioGroup
                 value={draft.gender || undefined}
-                onValueChange={(value) => onDraftChange({ ...draft, gender: value })}
+                onValueChange={(value) =>
+                  onDraftChange({ ...draft, gender: draft.gender === value ? "" : value })
+                }
                 className="flex flex-wrap gap-x-5 gap-y-2"
               >
                 <div className="flex items-center gap-2">
-                  <RadioGroupItem value="male" id="gender-male" />
+                  <RadioGroupItem
+                    value="male"
+                    id="gender-male"
+                    onPointerDown={(e) => {
+                      if (draft.gender === "male") {
+                        e.preventDefault();
+                        onDraftChange({ ...draft, gender: "" });
+                      }
+                    }}
+                  />
                   <Label htmlFor="gender-male" className="cursor-pointer font-normal">
                     Male
                   </Label>
                 </div>
                 <div className="flex items-center gap-2">
-                  <RadioGroupItem value="female" id="gender-female" />
+                  <RadioGroupItem
+                    value="female"
+                    id="gender-female"
+                    onPointerDown={(e) => {
+                      if (draft.gender === "female") {
+                        e.preventDefault();
+                        onDraftChange({ ...draft, gender: "" });
+                      }
+                    }}
+                  />
                   <Label htmlFor="gender-female" className="cursor-pointer font-normal">
                     Female
                   </Label>
