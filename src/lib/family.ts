@@ -327,17 +327,23 @@ export function siblingsOf(graph: FamilyGraph, id: string): string[] {
   return [...result];
 }
 
+/** Lowercase haystack for substring name search (first, middle, last, display, effective). */
+export function personSearchHaystack(graph: FamilyGraph, id: string): string {
+  const p = graph.byId.get(id);
+  if (!p) return "";
+  const label = effectiveDisplayName(graph, id);
+  return [p.first_name, p.middle_name, p.last_name, label, p.display_name]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
 export function searchPeople(graph: FamilyGraph, query: string, limit = 50): Person[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
   const scored: Array<{ p: Person; score: number }> = [];
   for (const p of graph.people) {
-    const label = effectiveDisplayName(graph, p.id);
-    const name = [p.first_name, p.middle_name, p.last_name, label, p.display_name]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    const idx = name.indexOf(q);
+    const idx = personSearchHaystack(graph, p.id).indexOf(q);
     if (idx === -1) continue;
     scored.push({ p, score: idx === 0 ? 0 : 1 });
   }

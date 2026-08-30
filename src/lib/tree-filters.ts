@@ -1,4 +1,4 @@
-import { effectiveDisplayName, type FamilyGraph } from "@/lib/family";
+import { personSearchHaystack, type FamilyGraph } from "@/lib/family";
 
 export type TreeFilters = {
   query: string;
@@ -18,7 +18,7 @@ export function personMatches(graph: FamilyGraph, id: string, filters: TreeFilte
   if (!person) return false;
 
   const q = filters.query.trim().toLowerCase();
-  if (q && !effectiveDisplayName(graph, id).toLowerCase().includes(q)) return false;
+  if (q && !personSearchHaystack(graph, id).includes(q)) return false;
 
   if (filters.branchId) {
     const branch = graph.branchOf.get(id);

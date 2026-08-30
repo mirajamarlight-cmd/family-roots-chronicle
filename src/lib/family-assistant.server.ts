@@ -56,7 +56,7 @@ function llmConfig(): { apiKey: string; baseUrl: string; model: string } {
     return {
       apiKey: groqKey,
       baseUrl: "https://api.groq.com/openai/v1",
-      model: process.env.GROQ_MODEL?.trim() || "llama-3.3-70b-versatile",
+      model: process.env.GROQ_MODEL?.trim() || "openai/gpt-oss-120b",
     };
   }
 
