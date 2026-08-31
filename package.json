@@ -13,6 +13,7 @@
     "format": "prettier --write .",
     "check:relationship": "node --experimental-strip-types src/lib/relationship-finder.self-check.ts",
     "check:submissions": "node --experimental-strip-types src/lib/submissions.self-check.ts",
+    "check:contact-format": "node --experimental-strip-types src/lib/contact-format.self-check.ts",
     "check:family": "node --experimental-strip-types src/lib/family.self-check.ts",
     "check:assistant": "bun src/lib/family-assistant.self-check.ts",
     "check:ethiopian-calendar": "node --experimental-strip-types src/lib/ethiopian-calendar.self-check.ts",
@@ -72,6 +73,7 @@
     "tw-animate-css": "^1.3.4",
     "vaul": "^1.1.2",
     "vite-tsconfig-paths": "^6.0.2",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.2"
   },
   "devDependencies": {

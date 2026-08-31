@@ -1,12 +1,6 @@
-/** Digits only, with Ethiopia country code when local 09… number. */
-export function normalizePhoneE164(phone: string): string | null {
-  const digits = phone.replace(/\D/g, "");
-  if (!digits) return null;
-  if (digits.startsWith("251")) return digits;
-  if (digits.startsWith("0")) return `251${digits.slice(1)}`;
-  if (digits.length === 9 && digits.startsWith("9")) return `251${digits}`;
-  return digits;
-}
+import { normalizePhoneE164 } from "./contact-format.ts";
+
+export { normalizePhoneE164 };
 
 export function telHref(phone: string): string {
   const e164 = normalizePhoneE164(phone);

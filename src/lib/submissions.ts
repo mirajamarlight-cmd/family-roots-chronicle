@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
+import { formatAddress, formatPhone, parseAddress, parsePhone } from "./contact-format";
 import { submissionProblem, type SubmissionDraft, type SubmissionContext } from "./submission-draft";
 
 export type PersonSubmission = Tables<"person_submissions">;
@@ -53,8 +54,8 @@ export async function submitRecord(
     middle_name: d.middle_name.trim() || null,
     last_name: d.last_name.trim() || null,
     birth_date: d.birth_date.trim(),
-    address: d.address.trim(),
-    phone: d.phone.trim(),
+    address: formatAddress(parseAddress(d.address)),
+    phone: formatPhone(parsePhone(d.phone)),
     email: d.email.trim(),
     notes: d.notes.trim() || null,
     other_parent_name: !addingOther ? d.other_parent_name.trim() || null : null,

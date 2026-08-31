@@ -18,6 +18,7 @@ import { Route as SearchRouteImport } from './routes/search'
 import { Route as StatisticsRouteImport } from './routes/statistics'
 import { Route as TreeRouteImport } from './routes/tree'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminBackupRouteImport } from './routes/admin/backup'
 import { Route as AdminMembersRouteImport } from './routes/admin/members'
 import { Route as AdminSubmissionsRouteImport } from './routes/admin/submissions'
 import { Route as AdminTreeRouteImport } from './routes/admin/tree'
@@ -67,6 +68,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminBackupRoute = AdminBackupRouteImport.update({
+  id: '/backup',
+  path: '/backup',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminMembersRoute = AdminMembersRouteImport.update({
   id: '/members',
   path: '/members',
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/statistics': typeof StatisticsRoute
   '/tree': typeof TreeRoute
+  '/admin/backup': typeof AdminBackupRoute
   '/admin/members': typeof AdminMembersRoute
   '/admin/submissions': typeof AdminSubmissionsRoute
   '/admin/tree': typeof AdminTreeRoute
@@ -105,6 +112,7 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/statistics': typeof StatisticsRoute
   '/tree': typeof TreeRoute
+  '/admin/backup': typeof AdminBackupRoute
   '/admin/members': typeof AdminMembersRoute
   '/admin/submissions': typeof AdminSubmissionsRoute
   '/admin/tree': typeof AdminTreeRoute
@@ -120,6 +128,7 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/statistics': typeof StatisticsRoute
   '/tree': typeof TreeRoute
+  '/admin/backup': typeof AdminBackupRoute
   '/admin/members': typeof AdminMembersRoute
   '/admin/submissions': typeof AdminSubmissionsRoute
   '/admin/tree': typeof AdminTreeRoute
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/statistics'
     | '/tree'
+    | '/admin/backup'
     | '/admin/members'
     | '/admin/submissions'
     | '/admin/tree'
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/statistics'
     | '/tree'
+    | '/admin/backup'
     | '/admin/members'
     | '/admin/submissions'
     | '/admin/tree'
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/statistics'
     | '/tree'
+    | '/admin/backup'
     | '/admin/members'
     | '/admin/submissions'
     | '/admin/tree'
@@ -245,6 +257,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/backup': {
+      id: '/admin/backup'
+      path: '/backup'
+      fullPath: '/admin/backup'
+      preLoaderRoute: typeof AdminBackupRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/members': {
       id: '/admin/members'
       path: '/members'
@@ -270,6 +289,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteRouteChildren {
+  AdminBackupRoute: typeof AdminBackupRoute
   AdminMembersRoute: typeof AdminMembersRoute
   AdminSubmissionsRoute: typeof AdminSubmissionsRoute
   AdminTreeRoute: typeof AdminTreeRoute
@@ -277,6 +297,7 @@ interface AdminRouteRouteChildren {
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminBackupRoute: AdminBackupRoute,
   AdminMembersRoute: AdminMembersRoute,
   AdminSubmissionsRoute: AdminSubmissionsRoute,
   AdminTreeRoute: AdminTreeRoute,

@@ -1,3 +1,4 @@
+import { isValidAddress, isValidPhone, parseAddress, parsePhone } from "./contact-format.ts";
 import {
   hasPatronymicFatherChain,
   personHasPatronymicChain,
@@ -96,8 +97,13 @@ export function submissionProblem(
 ): string | null {
   if (!d.first_name.trim()) return "Your first name is required.";
   if (!d.birth_date.trim()) return "Birthday is required.";
-  if (!d.address.trim()) return "Address is required.";
-  if (!d.phone.trim()) return "Phone number is required.";
+  if (!isValidAddress(parseAddress(d.address))) return "Choose a country and city.";
+  const phone = parsePhone(d.phone);
+  if (!isValidPhone(phone)) {
+    return phone.countryId === "ET"
+      ? "Enter a valid Ethiopian mobile number (9xx xxx xxxx)."
+      : "Enter a valid phone number.";
+  }
   const email = d.email.trim();
   if (!email || !email.includes("@")) return "A valid email is required.";
   if (d.kind === "new") {

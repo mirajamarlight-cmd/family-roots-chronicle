@@ -6,8 +6,8 @@ function draft(over: Partial<SubmissionDraft>): SubmissionDraft {
     ...emptyDraft("a@b.c"),
     first_name: "Hamdi",
     birth_date: "1990-01-01",
-    address: "Harar",
-    phone: "0911",
+    address: "Ethiopia, Harar",
+    phone: "+251 911234567",
     ...over,
   };
 }
@@ -29,8 +29,8 @@ if (submissionProblem(draft({ kind: "edit", person_id: "p1" })) !== null) {
 }
 expectProblem(draft({ first_name: "" }), "first name");
 expectProblem(draft({ birth_date: "" }), "birthday");
-expectProblem(draft({ address: "" }), "address");
-expectProblem(draft({ phone: "" }), "phone");
+expectProblem(draft({ address: "" }), "country and city");
+expectProblem(draft({ phone: "" }), "mobile");
 expectProblem(draft({ email: "nope" }), "email");
 expectProblem(draft({ kind: "new", link_side: "" }), "father or mother");
 expectProblem(draft({ kind: "new", link_side: "mother" }), "already on the tree");

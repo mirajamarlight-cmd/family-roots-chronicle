@@ -5,6 +5,7 @@ import {
   Inbox,
   LogOut,
   Menu,
+  DatabaseBackup,
   Network,
   TreeDeciduous,
   Users,
@@ -24,6 +25,7 @@ const NAV = [
   { to: "/admin/tree", label: "Tree editor", icon: Network },
   { to: "/admin/submissions", label: "Pending", icon: Inbox, countKey: "pending" as const },
   { to: "/admin/members", label: "Registered", icon: Users, countKey: "members" as const },
+  { to: "/admin/backup", label: "Backup", icon: DatabaseBackup },
 ] as const;
 
 function NavLinks({

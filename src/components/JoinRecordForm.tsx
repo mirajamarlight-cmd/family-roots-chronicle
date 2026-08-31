@@ -1,6 +1,7 @@
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { JoinContactFields } from "@/components/JoinContactFields";
 import { FamilyPlace } from "@/components/family-place";
 import { DualDateField } from "@/components/DualDateField";
 import { PersonAvatarBadge } from "@/components/person-identity";
@@ -435,8 +436,8 @@ export function JoinRecordForm({
       <fieldset className="space-y-3 rounded-2xl border border-border bg-card/60 p-4">
         <legend className="px-1 text-sm font-medium">Your details</legend>
         <p className="text-sm text-muted-foreground">
-          Address, phone, and email appear on this person’s profile after an admin approves. Required
-          fields are marked *.
+          Choose your country and city, then add a phone number with the right country code. Contact
+          details appear on your profile after an admin approves. Required fields are marked *.
         </p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
@@ -489,33 +490,12 @@ export function JoinRecordForm({
             onChange={(iso) => onChange({ ...draft, birth_date: iso })}
             className="sm:col-span-2"
           />
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="address">
-              Address <span className="text-muted-foreground">*</span>
-            </Label>
-            <Input
-              id="address"
-              name="street-address"
-              autoComplete="street-address"
-              required
-              value={draft.address}
-              onChange={(e) => onChange({ ...draft, address: e.target.value })}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="phone">
-              Phone <span className="text-muted-foreground">*</span>
-            </Label>
-            <Input
-              id="phone"
-              name="tel"
-              type="tel"
-              autoComplete="tel"
-              required
-              value={draft.phone}
-              onChange={(e) => onChange({ ...draft, phone: e.target.value })}
-            />
-          </div>
+          <JoinContactFields
+            phone={draft.phone}
+            address={draft.address}
+            onPhoneChange={(phone) => onChange({ ...draft, phone })}
+            onAddressChange={(address) => onChange({ ...draft, address })}
+          />
           <div className="space-y-1.5">
             <Label htmlFor="join-email">
               Email <span className="text-muted-foreground">*</span>
