@@ -240,8 +240,8 @@ function listDuplicates(graph: FamilyGraph) {
   }));
 }
 
-function pickUpdateFields(args: Record<string, unknown>) {
-  const fields: Record<string, unknown> = {};
+function pickUpdateFields(args: Record<string, unknown>): Record<string, AssistantJsonValue> {
+  const fields: Record<string, AssistantJsonValue> = {};
   for (const key of [
     "first_name",
     "middle_name",
@@ -252,7 +252,7 @@ function pickUpdateFields(args: Record<string, unknown>) {
     "notes",
     "is_deceased",
   ] as const) {
-    if (args[key] !== undefined) fields[key] = args[key];
+    if (args[key] !== undefined) fields[key] = args[key] as AssistantJsonValue;
   }
   return fields;
 }
