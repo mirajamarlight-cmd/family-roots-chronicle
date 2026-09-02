@@ -21,7 +21,7 @@ async function fetchPeople(client: SupabaseClient<Database>): Promise<Person[]> 
   if (base.error) throw base.error;
   return ((base.data ?? []) as Omit<Person, "is_deceased">[]).map((p) => ({
     ...p,
-    is_deceased: personIsDeceased(p),
+    is_deceased: personIsDeceased({ ...p, is_deceased: false }),
   }));
 }
 
