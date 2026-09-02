@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
-import type { AssistantAction } from "@/lib/family-assistant-actions";
+import type { AssistantAction, AssistantJsonValue } from "@/lib/family-assistant-actions";
 import { resolvePersonQuery } from "@/lib/family-assistant-tools";
 import {
   duplicateEffectiveNames,
