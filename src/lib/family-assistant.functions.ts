@@ -26,7 +26,7 @@ const chatInput = z.object({
 export const familyAssistantChat = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .validator(chatInput)
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }): Promise<import("@/lib/family-assistant.server").AssistantChatResult> => {
     const { supabase } = context as { supabase: SupabaseClient<Database> };
     const { runFamilyAssistant } = await import("@/lib/family-assistant.server");
     return runFamilyAssistant(supabase, data.messages, data.context);

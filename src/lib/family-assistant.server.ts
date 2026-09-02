@@ -17,8 +17,8 @@ export type AssistantChatMessage = {
 };
 
 export type AssistantChatContext = {
-  selectedPersonId?: string | null;
-  pendingSubmissionCount?: number;
+  selectedPersonId?: string | null | undefined;
+  pendingSubmissionCount?: number | undefined;
 };
 
 export type AssistantChatResult = {
