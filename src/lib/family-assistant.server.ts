@@ -51,21 +51,21 @@ const READ_TOOL_NAMES = new Set<string>([
 const MAX_TOOL_ROUNDS = 8;
 
 function llmConfig(): { apiKey: string; baseUrl: string; model: string } {
-  const groqKey = process.env.GROQ_API_KEY?.trim();
+  const groqKey = process.env["GROQ_API_KEY"]?.trim();
   if (groqKey) {
     return {
       apiKey: groqKey,
       baseUrl: "https://api.groq.com/openai/v1",
-      model: process.env.GROQ_MODEL?.trim() || "openai/gpt-oss-120b",
+      model: process.env["GROQ_MODEL"]?.trim() || "openai/gpt-oss-120b",
     };
   }
 
-  const openAiKey = process.env.OPENAI_API_KEY?.trim();
+  const openAiKey = process.env["OPENAI_API_KEY"]?.trim();
   if (openAiKey) {
     return {
       apiKey: openAiKey,
       baseUrl: "https://api.openai.com/v1",
-      model: process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini",
+      model: process.env["OPENAI_MODEL"]?.trim() || "gpt-4o-mini",
     };
   }
 

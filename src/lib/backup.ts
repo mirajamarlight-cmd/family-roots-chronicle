@@ -129,7 +129,7 @@ async function upsertBatches<T extends Record<string, unknown>>(
   let count = 0;
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const chunk = rows.slice(i, i + BATCH_SIZE);
-    const { error } = await client.from(table).upsert(chunk, { onConflict });
+    const { error } = await client.from(table).upsert(chunk as never, { onConflict });
     if (error) errors.push(`${table} (rows ${i + 1}–${i + chunk.length}): ${error.message}`);
     else count += chunk.length;
   }
