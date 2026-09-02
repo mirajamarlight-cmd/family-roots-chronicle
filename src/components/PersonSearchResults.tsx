@@ -111,8 +111,8 @@ type Props = {
   compact?: boolean;
   className?: string;
   emptyMessage?: string;
-  claimedByPerson?: ReadonlyMap<string, string>;
-  currentUserId?: string | null;
+  claimedByPerson?: ReadonlyMap<string, string> | undefined;
+  currentUserId?: string | null | undefined;
 };
 
 export function PersonSearchResults({

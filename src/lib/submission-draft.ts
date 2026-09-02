@@ -79,8 +79,8 @@ function otherWord(side: LinkSide | "") {
 }
 
 export type SubmissionContext = {
-  userId?: string | null;
-  claimsByPerson?: ReadonlyMap<string, string>;
+  userId?: string | null | undefined;
+  claimsByPerson?: ReadonlyMap<string, string> | undefined;
 };
 
 export function personClaimedByOther(personId: string, ctx?: SubmissionContext): boolean {
