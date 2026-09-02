@@ -4,6 +4,40 @@ import type { Database } from "@/integrations/supabase/types";
 import type { AssistantConfirmKind } from "@/lib/family-assistant-actions";
 import { personIsDeceased } from "@/lib/family";
 
+type PersonFields = {
+  first_name?: unknown;
+  middle_name?: unknown;
+  last_name?: unknown;
+  gender?: unknown;
+  birth_date?: unknown;
+  death_date?: unknown;
+  notes?: unknown;
+  is_deceased?: unknown;
+};
+
+type ActionPayload = {
+  submissionId?: unknown;
+  parent_id?: unknown;
+  person_id?: unknown;
+  first_name?: unknown;
+  middle_name?: unknown;
+  last_name?: unknown;
+  gender?: unknown;
+  birth_date?: unknown;
+  fields?: PersonFields;
+};
+
+type PersonUpdate = {
+  first_name?: string;
+  middle_name?: string | null;
+  last_name?: string | null;
+  display_name?: string;
+  gender?: string | null;
+  birth_date?: string | null;
+  death_date?: string | null;
+  notes?: string | null;
+};
+
 async function applyDeceased(
   supabase: SupabaseClient<Database>,
   id: string,
@@ -31,40 +65,41 @@ export async function executeAssistantAction(
   kind: AssistantConfirmKind,
   payload: Record<string, unknown>,
 ): Promise<{ ok: true; message: string; personId?: string }> {
+  const p = payload as ActionPayload;
   switch (kind) {
     case "approve_submission": {
-      const submissionId = String(payload.submissionId ?? "");
+      const submissionId = String(p.submissionId ?? "");
       if (!submissionId) throw new Error("Missing submission id.");
       const { data, error } = await supabase.rpc("approve_submission", { _id: submissionId });
       if (error) throw error;
       return {
         ok: true,
         message: "Submission approved — now on the tree.",
-        personId: typeof data === "string" ? data : undefined,
+        ...(typeof data === "string" ? { personId: data } : {}),
       };
     }
     case "reject_submission": {
-      const submissionId = String(payload.submissionId ?? "");
+      const submissionId = String(p.submissionId ?? "");
       if (!submissionId) throw new Error("Missing submission id.");
       const { error } = await supabase.rpc("reject_submission", { _id: submissionId });
       if (error) throw error;
       return { ok: true, message: "Submission rejected." };
     }
     case "add_child": {
-      const parent_id = String(payload.parent_id ?? "");
-      const first_name = String(payload.first_name ?? "").trim();
+      const parent_id = String(p.parent_id ?? "");
+      const first_name = String(p.first_name ?? "").trim();
       if (!parent_id || !first_name) throw new Error("Parent and first name are required.");
 
       const row = {
         first_name,
-        middle_name: (payload.middle_name as string | null) ?? null,
-        last_name: (payload.last_name as string | null) ?? null,
-        display_name: [first_name, payload.middle_name, payload.last_name]
+        middle_name: (p.middle_name as string | null) ?? null,
+        last_name: (p.last_name as string | null) ?? null,
+        display_name: [first_name, p.middle_name, p.last_name]
           .map((s) => String(s ?? "").trim())
           .filter(Boolean)
           .join(" "),
-        gender: (payload.gender as string | null) ?? null,
-        birth_date: (payload.birth_date as string | null) ?? null,
+        gender: (p.gender as string | null) ?? null,
+        birth_date: (p.birth_date as string | null) ?? null,
         death_date: null,
         notes: null,
       };
@@ -86,12 +121,12 @@ export async function executeAssistantAction(
       };
     }
     case "update_person": {
-      const person_id = String(payload.person_id ?? "");
-      const fields = (payload.fields ?? {}) as Record<string, unknown>;
+      const person_id = String(p.person_id ?? "");
+      const fields: PersonFields = p.fields ?? {};
       if (!person_id) throw new Error("Missing person id.");
       if (!Object.keys(fields).length) throw new Error("No fields to update.");
 
-      const update: Record<string, unknown> = {};
+      const update: PersonUpdate = {};
       if (fields.first_name !== undefined) update.first_name = String(fields.first_name).trim();
       if (fields.middle_name !== undefined) {
         update.middle_name = String(fields.middle_name).trim() || null;
@@ -133,7 +168,7 @@ export async function executeAssistantAction(
           fields.death_date !== undefined
             ? String(fields.death_date).trim() || null
             : isDeceased
-              ? ((update.death_date as string | null) ?? null)
+              ? (update.death_date ?? null)
               : null;
         await applyDeceased(supabase, person_id, isDeceased, deathDate);
       } else if (fields.death_date !== undefined && !update.death_date) {
@@ -142,8 +177,8 @@ export async function executeAssistantAction(
         await applyDeceased(
           supabase,
           person_id,
-          personIsDeceased({ is_deceased: false, death_date: update.death_date as string }),
-          update.death_date as string,
+          personIsDeceased({ is_deceased: false, death_date: update.death_date ?? null }),
+          update.death_date ?? null,
         );
       }
 

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
-import type { AssistantAction } from "@/lib/family-assistant-actions";
+import type { AssistantAction, AssistantJsonValue } from "@/lib/family-assistant-actions";
 import { resolvePersonQuery } from "@/lib/family-assistant-tools";
 import {
   duplicateEffectiveNames,
@@ -240,8 +240,8 @@ function listDuplicates(graph: FamilyGraph) {
   }));
 }
 
-function pickUpdateFields(args: Record<string, unknown>) {
-  const fields: Record<string, unknown> = {};
+function pickUpdateFields(args: Record<string, unknown>): Record<string, AssistantJsonValue> {
+  const fields: Record<string, AssistantJsonValue> = {};
   for (const key of [
     "first_name",
     "middle_name",
@@ -252,7 +252,7 @@ function pickUpdateFields(args: Record<string, unknown>) {
     "notes",
     "is_deceased",
   ] as const) {
-    if (args[key] !== undefined) fields[key] = args[key];
+    if (args[key] !== undefined) fields[key] = args[key] as AssistantJsonValue;
   }
   return fields;
 }
@@ -282,26 +282,26 @@ export async function runAdminAssistantTool(
       };
     }
     case "get_submission_detail": {
-      const row = await fetchSubmission(supabase, String(args.submission_id ?? ""));
+      const row = await fetchSubmission(supabase, String(args["submission_id"] ?? ""));
       if (!row) return { error: "Pending submission not found." };
       return submissionSummary(graph, row);
     }
     case "match_submission_to_tree": {
-      const row = await fetchSubmission(supabase, String(args.submission_id ?? ""));
+      const row = await fetchSubmission(supabase, String(args["submission_id"] ?? ""));
       if (!row) return { error: "Pending submission not found." };
       return matchCandidates(graph, row);
     }
     case "list_duplicate_names":
       return { duplicates: listDuplicates(graph) };
     case "select_person_in_admin": {
-      const resolved = resolvePersonQuery(graph, String(args.query ?? ""));
+      const resolved = resolvePersonQuery(graph, String(args["query"] ?? ""));
       if (!resolved.ok) return resolved;
       const label = effectiveDisplayName(graph, resolved.id);
       actions.push({ type: "open_person", personId: resolved.id, label });
       return { opened: true, person_id: resolved.id, name: label };
     }
     case "prepare_approve_submission": {
-      const row = await fetchSubmission(supabase, String(args.submission_id ?? ""));
+      const row = await fetchSubmission(supabase, String(args["submission_id"] ?? ""));
       if (!row) return { error: "Pending submission not found." };
       const name = submissionName(row);
       const id = crypto.randomUUID();
@@ -320,7 +320,7 @@ export async function runAdminAssistantTool(
       };
     }
     case "prepare_reject_submission": {
-      const row = await fetchSubmission(supabase, String(args.submission_id ?? ""));
+      const row = await fetchSubmission(supabase, String(args["submission_id"] ?? ""));
       if (!row) return { error: "Pending submission not found." };
       const name = submissionName(row);
       const id = crypto.randomUUID();
@@ -339,19 +339,19 @@ export async function runAdminAssistantTool(
       };
     }
     case "prepare_add_child": {
-      const resolved = resolvePersonQuery(graph, String(args.parent_query ?? ""));
+      const resolved = resolvePersonQuery(graph, String(args["parent_query"] ?? ""));
       if (!resolved.ok) return resolved;
       const parentName = effectiveDisplayName(graph, resolved.id);
-      const first_name = String(args.first_name ?? "").trim();
+      const first_name = String(args["first_name"] ?? "").trim();
       if (!first_name) return { error: "first_name is required." };
       const id = crypto.randomUUID();
       const payload = {
         parent_id: resolved.id,
         first_name,
-        middle_name: String(args.middle_name ?? "").trim() || null,
-        last_name: String(args.last_name ?? "").trim() || null,
-        gender: String(args.gender ?? "").trim() || null,
-        birth_date: String(args.birth_date ?? "").trim() || null,
+        middle_name: String(args["middle_name"] ?? "").trim() || null,
+        last_name: String(args["last_name"] ?? "").trim() || null,
+        gender: String(args["gender"] ?? "").trim() || null,
+        birth_date: String(args["birth_date"] ?? "").trim() || null,
       };
       actions.push({
         type: "confirm",
@@ -369,7 +369,7 @@ export async function runAdminAssistantTool(
       };
     }
     case "prepare_update_person": {
-      const resolved = resolvePersonQuery(graph, String(args.query ?? ""));
+      const resolved = resolvePersonQuery(graph, String(args["query"] ?? ""));
       if (!resolved.ok) return resolved;
       const fields = pickUpdateFields(args);
       if (!Object.keys(fields).length) {

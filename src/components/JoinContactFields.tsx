@@ -63,7 +63,7 @@ function AddressFields({
           {isEthiopia ? (
             <>
               <Select
-                value={citySelectValue || undefined}
+                value={citySelectValue || ""}
                 onValueChange={(city) =>
                   patch({ city: city === OTHER_CITY ? "" : city, details: value.details })
                 }

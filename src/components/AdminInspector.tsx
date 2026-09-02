@@ -234,7 +234,7 @@ function InspectorBody({
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Gender</Label>
               <RadioGroup
-                value={draft.gender || undefined}
+                value={draft.gender || ""}
                 onValueChange={(value) =>
                   onGenderChange({ ...draft, gender: draft.gender === value ? "" : value })
                 }

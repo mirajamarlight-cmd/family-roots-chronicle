@@ -54,18 +54,18 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 /** Structural validation — no graph cycle check (see backup.ts). */
 export function validateBackupStructure(raw: unknown): { backup: FamilyBackup } | { error: string } {
   if (!isRecord(raw)) return { error: "Backup must be a JSON object" };
-  if (raw.format !== BACKUP_FORMAT) return { error: "Unrecognized backup format" };
-  if (raw.version !== BACKUP_VERSION) return { error: `Unsupported backup version (${raw.version})` };
+  if (raw["format"] !== BACKUP_FORMAT) return { error: "Unrecognized backup format" };
+  if (raw["version"] !== BACKUP_VERSION) return { error: `Unsupported backup version (${raw["version"]})` };
 
-  if (!Array.isArray(raw.people)) return { error: "Missing people array" };
-  if (!Array.isArray(raw.parent_child)) return { error: "Missing parent_child array" };
-  if (!Array.isArray(raw.marriages)) return { error: "Missing marriages array" };
-  if (!Array.isArray(raw.person_claims)) return { error: "Missing person_claims array" };
+  if (!Array.isArray(raw["people"])) return { error: "Missing people array" };
+  if (!Array.isArray(raw["parent_child"])) return { error: "Missing parent_child array" };
+  if (!Array.isArray(raw["marriages"])) return { error: "Missing marriages array" };
+  if (!Array.isArray(raw["person_claims"])) return { error: "Missing person_claims array" };
 
-  const people = raw.people as BackupPerson[];
-  const parent_child = raw.parent_child as BackupLink[];
-  const marriages = raw.marriages as BackupMarriage[];
-  const person_claims = raw.person_claims as BackupClaim[];
+  const people = raw["people"] as BackupPerson[];
+  const parent_child = raw["parent_child"] as BackupLink[];
+  const marriages = raw["marriages"] as BackupMarriage[];
+  const person_claims = raw["person_claims"] as BackupClaim[];
 
   const personIds = new Set<string>();
   for (const p of people) {
@@ -97,7 +97,7 @@ export function validateBackupStructure(raw: unknown): { backup: FamilyBackup } 
   }
 
   const exported_at =
-    typeof raw.exported_at === "string" ? raw.exported_at : new Date().toISOString();
+    typeof raw["exported_at"] === "string" ? raw["exported_at"] : new Date().toISOString();
 
   return {
     backup: {
@@ -193,6 +193,6 @@ export function normalizeBackup(backup: FamilyBackup): FamilyBackup {
       gender: p.gender?.trim() || "male",
     })),
     parent_child: fillMissingChildOrders(backup.parent_child),
-    meta: warnings.length > 0 ? { warnings } : undefined,
+    ...(warnings.length > 0 ? { meta: { warnings } } : {}),
   };
 }

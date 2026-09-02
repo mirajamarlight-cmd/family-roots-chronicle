@@ -8,9 +8,10 @@ export type PersonSubmission = Tables<"person_submissions">;
 export type PersonClaim = Tables<"person_claims">;
 
 export async function fetchPersonClaimIndex(): Promise<Map<string, string>> {
-  const { data, error } = await supabase.rpc("person_claim_index");
+  const { data, error } = await supabase.rpc("person_claim_index" as never);
   if (error) throw error;
-  return new Map((data ?? []).map((row) => [row.person_id, row.user_id]));
+  const rows = (data ?? []) as { person_id: string; user_id: string }[];
+  return new Map(rows.map((row) => [row.person_id, row.user_id]));
 }
 
 export async function fetchJoinState(userId: string) {

@@ -4,6 +4,14 @@ export type AssistantConfirmKind =
   | "add_child"
   | "update_person";
 
+export type AssistantJsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | AssistantJsonValue[]
+  | { [key: string]: AssistantJsonValue };
+
 export type AssistantAction =
   | { type: "open_person"; personId: string; label: string }
   | {
@@ -11,5 +19,5 @@ export type AssistantAction =
       id: string;
       kind: AssistantConfirmKind;
       label: string;
-      payload: Record<string, unknown>;
+      payload: Record<string, AssistantJsonValue>;
     };

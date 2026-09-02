@@ -22,10 +22,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { to: "/admin/tree", label: "Tree editor", icon: Network },
+  { to: "/admin/tree", label: "Tree editor", icon: Network, countKey: undefined },
   { to: "/admin/submissions", label: "Pending", icon: Inbox, countKey: "pending" as const },
   { to: "/admin/members", label: "Registered", icon: Users, countKey: "members" as const },
-  { to: "/admin/backup", label: "Backup", icon: DatabaseBackup },
+  { to: "/admin/backup", label: "Backup", icon: DatabaseBackup, countKey: undefined },
 ] as const;
 
 function NavLinks({

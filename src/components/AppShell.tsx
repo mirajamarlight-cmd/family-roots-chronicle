@@ -35,7 +35,7 @@ const navLinkClass =
 function AccountNavLink({ className }: { className?: string }) {
   const { isProfile } = useJoinNav();
 
-  if (isProfile) return <ProfileMenu className={className} />;
+  if (isProfile) return <ProfileMenu {...(className ? { className } : {})} />;
 
   return (
     <Link

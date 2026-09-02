@@ -80,7 +80,7 @@ const withNullOrder = {
 const struct2 = validateBackupStructure(withNullOrder);
 if ("error" in struct2) throw new Error(struct2.error);
 const norm2 = normalizeBackup(struct2.backup);
-if (norm2.parent_child[0].child_order !== 1) throw new Error("expected child_order 1");
+if (norm2.parent_child[0]?.child_order !== 1) throw new Error("expected child_order 1");
 
 const bad = validateBackupStructure({ format: "wrong", version: 99 });
 if (!("error" in bad)) throw new Error("expected format error");

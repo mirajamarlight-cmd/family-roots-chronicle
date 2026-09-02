@@ -183,8 +183,8 @@ export function runAssistantTool(
 ): unknown {
   switch (name) {
     case "search_people": {
-      const query = String(args.query ?? "");
-      const limit = typeof args.limit === "number" ? args.limit : 10;
+      const query = String(args["query"] ?? "");
+      const limit = typeof args["limit"] === "number" ? args["limit"] : 10;
       const people = searchPeople(graph, query, limit);
       const duplicates = duplicateEffectiveNames(graph);
       return {
@@ -199,14 +199,14 @@ export function runAssistantTool(
       };
     }
     case "get_person": {
-      const resolved = resolvePersonQuery(graph, String(args.query ?? ""));
+      const resolved = resolvePersonQuery(graph, String(args["query"] ?? ""));
       if (!resolved.ok) return resolved;
       return personSummary(graph, resolved.id);
     }
     case "find_relationship": {
-      const a = resolvePersonQuery(graph, String(args.person_a ?? ""));
+      const a = resolvePersonQuery(graph, String(args["person_a"] ?? ""));
       if (!a.ok) return { person: "person_a", ...a };
-      const b = resolvePersonQuery(graph, String(args.person_b ?? ""));
+      const b = resolvePersonQuery(graph, String(args["person_b"] ?? ""));
       if (!b.ok) return { person: "person_b", ...b };
       const result = findRelationship(graph, a.id, b.id);
       return {
@@ -215,7 +215,7 @@ export function runAssistantTool(
       };
     }
     case "get_lineage": {
-      const resolved = resolvePersonQuery(graph, String(args.query ?? ""));
+      const resolved = resolvePersonQuery(graph, String(args["query"] ?? ""));
       if (!resolved.ok) return resolved;
       const chain = lineageChain(graph, resolved.id);
       return {
@@ -243,7 +243,7 @@ export function runAssistantTool(
       };
     }
     case "get_family_history": {
-      const sectionId = args.section_id ? String(args.section_id) : null;
+      const sectionId = args["section_id"] ? String(args["section_id"]) : null;
       if (sectionId) {
         const section = HOME_SECTIONS.find((s) => s.id === sectionId);
         if (!section) {
