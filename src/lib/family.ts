@@ -13,6 +13,8 @@ export type Person = {
   death_date: string | null;
   is_deceased: boolean;
   photo_url: string | null;
+  /** raw stored value (storage object path) before it is turned into a viewable link */
+  photo_path?: string | null;
   notes: string | null;
 };
 
@@ -105,7 +107,10 @@ export async function fetchFamilyGraph(): Promise<FamilyGraph> {
   ]);
   if (linkRes.error) throw linkRes.error;
 
-  return buildGraph(people, (linkRes.data ?? []) as Link[], []);
+  const { resolvePhotoUrls } = await import("./person-photo.ts");
+  const withPhotos = await resolvePhotoUrls(people);
+
+  return buildGraph(withPhotos, (linkRes.data ?? []) as Link[], []);
 }
 
 export function buildGraph(people: Person[], links: Link[], marriages: Marriage[]): FamilyGraph {
