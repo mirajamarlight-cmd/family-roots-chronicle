@@ -1,0 +1,4 @@
+CREATE POLICY "Anyone can view person photos" ON storage.objects FOR SELECT TO anon, authenticated USING (bucket_id = 'person-photos');
+CREATE POLICY "Admins upload person photos" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'person-photos' AND public.has_role(auth.uid(), 'admin'::public.app_role));
+CREATE POLICY "Admins update person photos" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'person-photos' AND public.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (bucket_id = 'person-photos' AND public.has_role(auth.uid(), 'admin'::public.app_role));
+CREATE POLICY "Admins delete person photos" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'person-photos' AND public.has_role(auth.uid(), 'admin'::public.app_role));
