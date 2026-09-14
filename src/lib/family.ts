@@ -13,6 +13,8 @@ export type Person = {
   death_date: string | null;
   is_deceased: boolean;
   photo_url: string | null;
+  /** raw stored value (storage object path) before it is turned into a viewable link */
+  photo_path?: string | null;
   notes: string | null;
 };
 
