@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { DualDateField } from "@/components/DualDateField";
 import { PersonAvatarBadge } from "@/components/person-identity";
 import { PersonContact } from "@/components/PersonContact";
+import { PersonPhotoField } from "@/components/PersonPhotoField";
 import { RelationshipManager } from "@/components/RelationshipManager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -199,6 +200,12 @@ function InspectorBody({
       </header>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+        {draft.id && (
+          <InspectorSection title="Photo" description="Shown on the tree, People page and profile.">
+            <PersonPhotoField graph={graph} personId={draft.id} />
+          </InspectorSection>
+        )}
+
         <InspectorSection title="Identity" description="Names shown across the family tree.">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2">
