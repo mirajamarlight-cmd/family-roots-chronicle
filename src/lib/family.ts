@@ -107,7 +107,10 @@ export async function fetchFamilyGraph(): Promise<FamilyGraph> {
   ]);
   if (linkRes.error) throw linkRes.error;
 
-  return buildGraph(people, (linkRes.data ?? []) as Link[], []);
+  const { resolvePhotoUrls } = await import("./person-photo.ts");
+  const withPhotos = await resolvePhotoUrls(people);
+
+  return buildGraph(withPhotos, (linkRes.data ?? []) as Link[], []);
 }
 
 export function buildGraph(people: Person[], links: Link[], marriages: Marriage[]): FamilyGraph {
