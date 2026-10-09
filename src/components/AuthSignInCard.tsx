@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { SITE_ORIGIN } from "@/lib/brand";
+import { dataBackend } from "@/lib/data-backend";
 
 type AuthMode = "signin" | "signup";
 
@@ -18,6 +19,15 @@ async function continueWithPassword(
   password: string,
   redirectTo: string,
 ) {
+  if (dataBackend() === "postgres") {
+    const { authLoginFn, authRegisterFn } = await import("@/lib/auth.functions");
+    if (mode === "signin") {
+      await authLoginFn({ data: { email, password } });
+      return true;
+    }
+    await authRegisterFn({ data: { email, password } });
+    return true;
+  }
   if (mode === "signin") {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw new Error("Email or password is incorrect.");

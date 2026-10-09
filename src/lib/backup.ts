@@ -42,6 +42,12 @@ export function downloadJsonFile(data: unknown, filename: string) {
 }
 
 export async function fetchBackupData(): Promise<FamilyBackup> {
+  const { dataBackend } = await import("@/lib/data-backend");
+  if (dataBackend() === "postgres") {
+    // Server-only path — never import DATABASE_URL code into the browser bundle.
+    const { pgFetchBackupDataFn } = await import("@/lib/pg-backup.functions");
+    return pgFetchBackupDataFn();
+  }
   const [peopleRes, linksRes, marriagesRes, claimsRes] = await Promise.all([
     supabase.from("people").select("*").order("display_name"),
     supabase.from("parent_child").select("*"),

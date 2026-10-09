@@ -259,7 +259,7 @@ export function ProfileMenu({ className }: { className?: string }) {
                 "text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive",
               )}
               onSelect={() => {
-                void supabase.auth.signOut();
+                void import("@/lib/auth-sign-out").then(({ signOutEverywhere }) => signOutEverywhere());
               }}
             >
               <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">

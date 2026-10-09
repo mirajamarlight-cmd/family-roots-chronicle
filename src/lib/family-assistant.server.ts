@@ -141,6 +141,16 @@ export async function runFamilyAssistant(
   ctx?: AssistantChatContext,
 ): Promise<AssistantChatResult> {
   const graph = await fetchFamilyGraphWithClient(supabase);
+  return runFamilyAssistantWithGraph(graph, messages, ctx, supabase);
+}
+
+/** Postgres dual-run: graph from SQL; admin tools use pg when supabase is null. */
+export async function runFamilyAssistantWithGraph(
+  graph: Awaited<ReturnType<typeof fetchFamilyGraphWithClient>>,
+  messages: AssistantChatMessage[],
+  ctx?: AssistantChatContext,
+  supabase?: SupabaseClient<Database> | null,
+): Promise<AssistantChatResult> {
   const actions: AssistantAction[] = [];
   const openAiMessages: OpenAiMessage[] = [
     { role: "system", content: buildSystemPrompt(graph, ctx) },
@@ -169,9 +179,15 @@ export async function runFamilyAssistant(
         args = {};
       }
 
-      const result = READ_TOOL_NAMES.has(name)
-        ? runAssistantTool(graph, name as AssistantToolName, args)
-        : await runAdminAssistantTool(supabase, graph, name, args, actions);
+      let result: unknown;
+      if (READ_TOOL_NAMES.has(name)) {
+        result = runAssistantTool(graph, name as AssistantToolName, args);
+      } else if (supabase) {
+        result = await runAdminAssistantTool(supabase, graph, name, args, actions);
+      } else {
+        const { runAdminAssistantToolPg } = await import("@/lib/family-assistant-admin-pg.server");
+        result = await runAdminAssistantToolPg(graph, name, args, actions);
+      }
 
       openAiMessages.push({
         role: "tool",

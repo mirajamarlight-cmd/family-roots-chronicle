@@ -3,6 +3,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { dataBackend } from "@/lib/data-backend";
 import { fetchFamilyGraph, type FamilyGraph } from "@/lib/family";
 import { fetchJoinState } from "@/lib/submissions";
 
@@ -12,10 +13,14 @@ let familyGraphChannelRefs = 0;
 let joinStateChannel: RealtimeChannel | null = null;
 let joinStateChannelRefs = 0;
 
+const usePostgres = () => dataBackend() === "postgres";
+
 export function useFamilyGraph() {
   const queryClient = useQueryClient();
+  const pg = usePostgres();
 
   useEffect(() => {
+    if (pg) return; // polling via refetchInterval below
     familyGraphChannelRefs++;
     if (!familyGraphChannel) {
       const invalidate = () => {
@@ -35,12 +40,13 @@ export function useFamilyGraph() {
         familyGraphChannel = null;
       }
     };
-  }, [queryClient]);
+  }, [queryClient, pg]);
 
   return useQuery<FamilyGraph>({
     queryKey: ["family-graph"],
     queryFn: fetchFamilyGraph,
     staleTime: 30_000,
+    refetchInterval: pg ? 15_000 : false,
   });
 }
 
@@ -48,8 +54,26 @@ export function useAuthSession() {
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const pg = usePostgres();
 
   useEffect(() => {
+    if (pg) {
+      let cancelled = false;
+      const refresh = async () => {
+        const { authSessionFn } = await import("@/lib/auth.functions");
+        const session = await authSessionFn();
+        if (cancelled) return;
+        setUserId(session.userId);
+        setEmail(session.email);
+        setLoading(false);
+      };
+      void refresh();
+      const id = window.setInterval(() => void refresh(), 30_000);
+      return () => {
+        cancelled = true;
+        window.clearInterval(id);
+      };
+    }
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserId(session?.user?.id ?? null);
       setEmail(session?.user?.email ?? null);
@@ -60,16 +84,17 @@ export function useAuthSession() {
       setLoading(false);
     });
     return () => sub.subscription.unsubscribe();
-  }, []);
+  }, [pg]);
 
   return { userId, email, loading };
 }
 
 export function useJoinState(userId: string | null) {
   const queryClient = useQueryClient();
+  const pg = usePostgres();
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || pg) return;
     joinStateChannelRefs++;
     if (!joinStateChannel) {
       const invalidate = () => {
@@ -90,13 +115,14 @@ export function useJoinState(userId: string | null) {
         joinStateChannel = null;
       }
     };
-  }, [queryClient, userId]);
+  }, [queryClient, userId, pg]);
 
   return useQuery({
     queryKey: ["join-state", userId],
     enabled: !!userId,
     queryFn: () => fetchJoinState(userId!),
     refetchOnMount: "always",
+    refetchInterval: pg ? 10_000 : false,
   });
 }
 
@@ -114,10 +140,16 @@ export function useJoinNav() {
 
 export function useIsAdmin() {
   const { userId, email, loading } = useAuthSession();
+  const pg = usePostgres();
   const query = useQuery({
     queryKey: ["is-admin", userId],
     enabled: !!userId,
     queryFn: async () => {
+      if (pg) {
+        const { pgIsAdminFn } = await import("@/lib/pg-data.functions");
+        const res = await pgIsAdminFn();
+        return res.isAdmin;
+      }
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")

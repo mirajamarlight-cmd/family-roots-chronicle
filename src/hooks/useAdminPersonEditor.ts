@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 import { emptyPersonDraft, personToDraft, type PersonDraft } from "@/components/AdminInspector";
 import { supabase } from "@/integrations/supabase/client";
+import { dataBackend } from "@/lib/data-backend";
 import type { FamilyGraph, Person } from "@/lib/family";
 import { personIsDeceased, updatePersonDeceased } from "@/lib/family";
 
@@ -62,12 +63,20 @@ export function useAdminPersonEditor(graph: FamilyGraph | undefined) {
       if (!next.id) return;
       setBusy(true);
       const gender = next.gender.trim() || null;
-      const { error } = await supabase.from("people").update({ gender }).eq("id", next.id);
-      setBusy(false);
-      if (error) {
-        toast.error(error.message);
+      try {
+        if (dataBackend() === "postgres") {
+          const { pgAdminUpdatePersonFn } = await import("@/lib/pg-data.functions");
+          await pgAdminUpdatePersonFn({ data: { id: next.id, patch: { gender } } });
+        } else {
+          const { error } = await supabase.from("people").update({ gender }).eq("id", next.id);
+          if (error) throw error;
+        }
+      } catch (e) {
+        setBusy(false);
+        toast.error(e instanceof Error ? e.message : "Could not save gender");
         return;
       }
+      setBusy(false);
       draftDirtyRef.current = false;
       void queryClient.invalidateQueries({ queryKey: ["family-graph"] });
     },
@@ -107,20 +116,28 @@ export function useAdminPersonEditor(graph: FamilyGraph | undefined) {
     };
 
     if (draft.id) {
-      const { error } = await supabase.from("people").update(payload).eq("id", draft.id);
-      if (error) {
+      try {
+        if (dataBackend() === "postgres") {
+          const { pgAdminUpdatePersonFn } = await import("@/lib/pg-data.functions");
+          await pgAdminUpdatePersonFn({
+            data: {
+              id: draft.id,
+              patch: { ...payload, is_deceased: draft.is_deceased },
+            },
+          });
+        } else {
+          const { error } = await supabase.from("people").update(payload).eq("id", draft.id);
+          if (error) throw error;
+          const deceasedResult = await updatePersonDeceased(
+            draft.id,
+            draft.is_deceased,
+            draft.death_date.trim() || null,
+          );
+          if (!deceasedResult.ok) throw new Error(deceasedResult.message);
+        }
+      } catch (e) {
         setBusy(false);
-        toast.error(error.message);
-        return;
-      }
-      const deceasedResult = await updatePersonDeceased(
-        draft.id,
-        draft.is_deceased,
-        draft.death_date.trim() || null,
-      );
-      if (!deceasedResult.ok) {
-        setBusy(false);
-        toast.error(deceasedResult.message);
+        toast.error(e instanceof Error ? e.message : "Could not save");
         return;
       }
       setBusy(false);
@@ -135,33 +152,48 @@ export function useAdminPersonEditor(graph: FamilyGraph | undefined) {
       return;
     }
 
-    const { data, error } = await supabase.from("people").insert(payload).select("id").single();
-    if (error || !data) {
+    let newId: string;
+    try {
+      if (dataBackend() === "postgres") {
+        const { pgAdminInsertPersonFn } = await import("@/lib/pg-data.functions");
+        const res = await pgAdminInsertPersonFn({
+          data: {
+            ...payload,
+            parent_id: draft.parent_id || null,
+          },
+        });
+        newId = res.id;
+        if (draft.is_deceased) {
+          await updatePersonDeceased(newId, true, draft.death_date.trim() || null);
+        }
+      } else {
+        const { data, error } = await supabase.from("people").insert(payload).select("id").single();
+        if (error || !data) throw new Error(error?.message ?? "Could not save");
+        newId = data.id;
+        if (draft.is_deceased) {
+          const deceasedResult = await updatePersonDeceased(
+            newId,
+            true,
+            draft.death_date.trim() || null,
+          );
+          if (!deceasedResult.ok) throw new Error(deceasedResult.message);
+        }
+        const parentId = draft.parent_id;
+        if (parentId) {
+          const { error: linkError } = await supabase.from("parent_child").insert({
+            parent_id: parentId,
+            child_id: newId,
+            relationship_type: "biological",
+          });
+          if (linkError) toast.error(linkError.message);
+        }
+      }
+    } catch (e) {
       setBusy(false);
-      toast.error(error?.message ?? "Could not save");
+      toast.error(e instanceof Error ? e.message : "Could not save");
       return;
     }
-    if (draft.is_deceased) {
-      const deceasedResult = await updatePersonDeceased(
-        data.id,
-        true,
-        draft.death_date.trim() || null,
-      );
-      if (!deceasedResult.ok) {
-        setBusy(false);
-        toast.error(deceasedResult.message);
-        return;
-      }
-    }
     const parentId = draft.parent_id;
-    if (parentId) {
-      const { error: linkError } = await supabase.from("parent_child").insert({
-        parent_id: parentId,
-        child_id: data.id,
-        relationship_type: "biological",
-      });
-      if (linkError) toast.error(linkError.message);
-    }
     setBusy(false);
     draftDirtyRef.current = false;
     const parent = parentId ? graph?.byId.get(parentId) : undefined;
@@ -169,8 +201,8 @@ export function useAdminPersonEditor(graph: FamilyGraph | undefined) {
       setSelectedId(parent.id);
       setDraft(personToDraft(parent));
     } else {
-      setSelectedId(data.id);
-      setDraft({ ...draft, id: data.id, parent_id: "" });
+      setSelectedId(newId);
+      setDraft({ ...draft, id: newId, parent_id: "" });
     }
     toast.success("Saved");
     void queryClient.invalidateQueries({ queryKey: ["family-graph"] });
@@ -192,13 +224,20 @@ export function useAdminPersonEditor(graph: FamilyGraph | undefined) {
           ? ` This will also delete ${relCount} recorded relationship${relCount === 1 ? "" : "s"} (${parts.join(", ")}) and cannot be undone.`
           : "";
       if (!window.confirm(`Remove ${p.display_name}?${relDetail}`)) return;
-      const { error } = await supabase.from("people").delete().eq("id", p.id);
-      if (error) toast.error(error.message);
-      else {
+      try {
+        if (dataBackend() === "postgres") {
+          const { pgAdminDeletePersonFn } = await import("@/lib/pg-data.functions");
+          await pgAdminDeletePersonFn({ data: { id: p.id } });
+        } else {
+          const { error } = await supabase.from("people").delete().eq("id", p.id);
+          if (error) throw error;
+        }
         toast.success("Removed");
         if (selectedId === p.id) setSelectedId(null);
         if (draft?.id === p.id) setDraft(null);
         void queryClient.invalidateQueries({ queryKey: ["family-graph"] });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not remove");
       }
     },
     [graph, draft?.id, queryClient, selectedId],

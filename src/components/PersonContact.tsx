@@ -3,11 +3,18 @@ import { MapPin } from "lucide-react";
 
 import { ContactLinks } from "@/components/ContactLinks";
 import { supabase } from "@/integrations/supabase/client";
+import { dataBackend } from "@/lib/data-backend";
 
 export function PersonContact({ personId, className }: { personId: string; className?: string }) {
   const { data } = useQuery({
     queryKey: ["person-claim", personId],
     queryFn: async () => {
+      if (dataBackend() === "postgres") {
+        const { pgPersonClaimFn } = await import("@/lib/pg-data.functions");
+        const claim = await pgPersonClaimFn({ data: { personId } });
+        if (!claim) return null;
+        return { address: claim.address, phone: claim.phone, email: claim.email };
+      }
       const { data, error } = await supabase
         .from("person_claims")
         .select("address, phone, email")

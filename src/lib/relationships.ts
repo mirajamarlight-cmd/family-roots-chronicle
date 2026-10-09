@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { dataBackend } from "@/lib/data-backend";
 import type { FamilyGraph } from "@/lib/family";
 
 export type LinkValidation = { ok: true } | { ok: false; reason: string };
@@ -89,6 +90,13 @@ export async function addParentChild(
   childId: string,
   relationshipType = "biological",
 ) {
+  if (dataBackend() === "postgres") {
+    const { pgAdminAddParentChildFn } = await import("@/lib/pg-data.functions");
+    await pgAdminAddParentChildFn({
+      data: { parentId, childId, relationshipType },
+    });
+    return;
+  }
   const { error } = await supabase
     .from("parent_child")
     .insert({ parent_id: parentId, child_id: childId, relationship_type: relationshipType });
@@ -96,6 +104,11 @@ export async function addParentChild(
 }
 
 export async function removeParentChild(parentId: string, childId: string) {
+  if (dataBackend() === "postgres") {
+    const { pgAdminRemoveParentChildFn } = await import("@/lib/pg-data.functions");
+    await pgAdminRemoveParentChildFn({ data: { parentId, childId } });
+    return;
+  }
   const { error } = await supabase
     .from("parent_child")
     .delete()
@@ -105,6 +118,11 @@ export async function removeParentChild(parentId: string, childId: string) {
 }
 
 export async function setChildOrder(parentId: string, orderedChildIds: string[]) {
+  if (dataBackend() === "postgres") {
+    const { pgAdminSetChildOrderFn } = await import("@/lib/pg-data.functions");
+    await pgAdminSetChildOrderFn({ data: { parentId, orderedChildIds } });
+    return;
+  }
   const updates = orderedChildIds.map((childId, index) =>
     supabase
       .from("parent_child")

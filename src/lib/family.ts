@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { dataBackend } from "@/lib/data-backend";
 
 import { effectiveDisplayName } from "./patronymic-name.ts";
 
@@ -81,6 +82,15 @@ export async function updatePersonDeceased(
   isDeceased: boolean,
   deathDate: string | null,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (dataBackend() === "postgres") {
+    const { pgUpdatePersonDeceasedFn } = await import("@/lib/pg-data.functions");
+    try {
+      await pgUpdatePersonDeceasedFn({ data: { id, isDeceased, deathDate } });
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, message: e instanceof Error ? e.message : "Update failed" };
+    }
+  }
   const death_date = isDeceased ? deathDate : null;
   const withFlag = await supabase.from("people").update({ is_deceased: isDeceased, death_date }).eq("id", id);
   if (!withFlag.error) return { ok: true };
@@ -101,6 +111,10 @@ export async function updatePersonDeceased(
 }
 
 export async function fetchFamilyGraph(): Promise<FamilyGraph> {
+  if (dataBackend() === "postgres") {
+    const { pgFetchFamilyGraphFn } = await import("@/lib/pg-data.functions");
+    return pgFetchFamilyGraphFn();
+  }
   const [people, linkRes] = await Promise.all([
     fetchPeople(),
     supabase.from("parent_child").select("id, parent_id, child_id, relationship_type, child_order"),

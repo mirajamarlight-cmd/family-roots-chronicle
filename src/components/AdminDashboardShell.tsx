@@ -92,7 +92,7 @@ function SidebarFooter({ className }: { className?: string }) {
         variant="ghost"
         size="sm"
         className="w-full justify-start gap-2 rounded-lg text-muted-foreground"
-        onClick={() => supabase.auth.signOut()}
+        onClick={() => void import("@/lib/auth-sign-out").then(({ signOutEverywhere }) => signOutEverywhere())}
       >
         <LogOut className="size-4" aria-hidden />
         Sign out

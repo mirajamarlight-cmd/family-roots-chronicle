@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { dataBackend } from "@/lib/data-backend";
 
 import { formatAddress, formatPhone, parseAddress, parsePhone } from "./contact-format";
 import { submissionProblem, type SubmissionDraft, type SubmissionContext } from "./submission-draft";
@@ -8,6 +9,11 @@ export type PersonSubmission = Tables<"person_submissions">;
 export type PersonClaim = Tables<"person_claims">;
 
 export async function fetchPersonClaimIndex(): Promise<Map<string, string>> {
+  if (dataBackend() === "postgres") {
+    const { pgClaimIndexFn } = await import("@/lib/pg-data.functions");
+    const entries = await pgClaimIndexFn();
+    return new Map(entries);
+  }
   const { data, error } = await supabase.rpc("person_claim_index" as never);
   if (error) throw error;
   const rows = (data ?? []) as { person_id: string; user_id: string }[];
@@ -15,6 +21,10 @@ export async function fetchPersonClaimIndex(): Promise<Map<string, string>> {
 }
 
 export async function fetchJoinState(userId: string) {
+  if (dataBackend() === "postgres") {
+    const { pgJoinStateFn } = await import("@/lib/pg-data.functions");
+    return pgJoinStateFn();
+  }
   const [pendingRes, claimRes] = await Promise.all([
     supabase
       .from("person_submissions")
@@ -45,7 +55,7 @@ export async function submitRecord(
   if (problem) throw new Error(problem);
   const addingLink = d.parent_source === "add";
   const addingOther = d.other_source === "add";
-  const { error } = await supabase.from("person_submissions").insert({
+  const payload = {
     user_id: userId,
     kind: d.kind,
     person_id: d.kind === "edit" ? d.person_id : null,
@@ -71,7 +81,13 @@ export async function submitRecord(
     other_parent_last_name: addingOther ? d.other_parent_last_name.trim() || null : null,
     other_parent_birth_date: addingOther ? d.other_parent_birth_date.trim() || null : null,
     other_parent_death_date: addingOther ? d.other_parent_death_date.trim() || null : null,
-  });
+  };
+  if (dataBackend() === "postgres") {
+    const { pgSubmitRecordFn } = await import("@/lib/pg-data.functions");
+    await pgSubmitRecordFn({ data: payload });
+    return;
+  }
+  const { error } = await supabase.from("person_submissions").insert(payload);
   if (error) {
     if (error.code === "23505") {
       throw new Error(
@@ -91,6 +107,10 @@ export async function submitRecord(
 }
 
 export async function fetchPendingSubmissions() {
+  if (dataBackend() === "postgres") {
+    const { pgPendingSubmissionsFn } = await import("@/lib/pg-data.functions");
+    return pgPendingSubmissionsFn();
+  }
   const { data, error } = await supabase
     .from("person_submissions")
     .select("*")
@@ -101,6 +121,10 @@ export async function fetchPendingSubmissions() {
 }
 
 export async function fetchRegisteredMembers() {
+  if (dataBackend() === "postgres") {
+    const { pgRegisteredMembersFn } = await import("@/lib/pg-data.functions");
+    return pgRegisteredMembersFn();
+  }
   const { data, error } = await supabase
     .from("person_claims")
     .select("*")
@@ -110,12 +134,22 @@ export async function fetchRegisteredMembers() {
 }
 
 export async function approveSubmission(id: string) {
+  if (dataBackend() === "postgres") {
+    const { pgApproveSubmissionFn } = await import("@/lib/pg-data.functions");
+    const res = await pgApproveSubmissionFn({ data: { id } });
+    return res.personId;
+  }
   const { data, error } = await supabase.rpc("approve_submission", { _id: id });
   if (error) throw error;
   return data;
 }
 
 export async function rejectSubmission(id: string) {
+  if (dataBackend() === "postgres") {
+    const { pgRejectSubmissionFn } = await import("@/lib/pg-data.functions");
+    await pgRejectSubmissionFn({ data: { id } });
+    return;
+  }
   const { error } = await supabase.rpc("reject_submission", { _id: id });
   if (error) throw error;
 }

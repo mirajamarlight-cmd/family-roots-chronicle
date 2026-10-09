@@ -101,7 +101,7 @@ function JoinFrame({
             <button
               type="button"
               className="font-medium text-foreground hover:underline"
-              onClick={() => void supabase.auth.signOut()}
+              onClick={() => void import("@/lib/auth-sign-out").then(({ signOutEverywhere }) => signOutEverywhere())}
             >
               Sign out
             </button>

@@ -10,7 +10,8 @@ export function hasDatabaseUrl(): boolean {
   return Boolean(process.env["DATABASE_URL"]);
 }
 
-export function sql(): Sql {
+/** Return the shared postgres.js client (tagged-template + helpers). */
+export function db(): Sql {
   const url = process.env["DATABASE_URL"];
   if (!url) {
     throw new Error("DATABASE_URL is not set");
@@ -26,12 +27,15 @@ export function sql(): Sql {
   return _sql;
 }
 
+/** @deprecated use db() — kept as alias during migration */
+export const sql = db;
+
 /** Set transaction-local actor for portable SQL triggers/functions. */
 export async function withAppUser<T>(
   userId: string | null,
   fn: (tx: TransactionSql) => Promise<T>,
 ): Promise<T> {
-  return sql().begin(async (tx) => {
+  return db().begin(async (tx) => {
     if (userId) {
       await tx`SELECT set_config('app.user_id', ${userId}, true)`;
     }

@@ -21,7 +21,9 @@
     "db:migrate": "bash scripts/db-migrate.sh",
     "db:load-backup": "bash scripts/load-from-supabase-backup.sh",
     "db:self-check": "bash scripts/db-self-check.sh",
-    "check:password": "bun src/server/auth/password.self-check.ts"
+    "db:safety-check": "bash scripts/db-safety-self-check.sh",
+    "check:password": "bun src/server/auth/password.self-check.ts",
+    "check:pg-auth": "bun src/server/auth/pg-auth.self-check.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

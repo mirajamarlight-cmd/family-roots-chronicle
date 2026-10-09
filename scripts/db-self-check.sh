@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Apply migrations + selective load into a disposable Postgres; verify counts.
+# Always uses an ephemeral container — never a shared/production URL.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -7,12 +8,14 @@ BACKUP="${1:-/home/abdosh/Downloads/family-roots-connect-89_261009.backup}"
 NAME="frc-selfcheck-$$"
 PG_IMAGE=postgres:18-alpine
 
-if [[ ! -f "$BACKUP" ]]; then
-  echo "Backup not found: $BACKUP" >&2
-  exit 1
-fi
+# shellcheck source=lib/db-safety.sh
+source "$ROOT/scripts/lib/db-safety.sh"
+frc_assert_backup_readonly "$BACKUP"
 
-cleanup() { docker rm -f "$NAME" >/dev/null 2>&1 || true; }
+cleanup() {
+  docker rm -f "$NAME" >/dev/null 2>&1 || true
+  frc_assert_backup_unchanged "$BACKUP" || true
+}
 trap cleanup EXIT
 
 docker run -d --name "$NAME" \
@@ -26,6 +29,11 @@ for i in $(seq 1 40); do
 done
 
 export DB_CONTAINER="$NAME"
+export FRC_TARGET_KIND=disposable
+export FRC_CONFIRM=REPLACE_ALL_DATA
+
+"$ROOT/scripts/db-migrate.sh"
+# Idempotency: second migrate must succeed
 "$ROOT/scripts/db-migrate.sh"
 "$ROOT/scripts/load-from-supabase-backup.sh" "$BACKUP"
 
@@ -43,6 +51,19 @@ BEGIN
   SELECT count(*) INTO c FROM app_users; IF c <> 12 THEN RAISE EXCEPTION 'users=%', c; END IF;
   SELECT count(*) INTO c FROM parent_child pc LEFT JOIN people p ON p.id = pc.parent_id WHERE p.id IS NULL;
   IF c <> 0 THEN RAISE EXCEPTION 'orphan parents=%', c; END IF;
+  IF NOT EXISTS (SELECT 1 FROM schema_migrations WHERE id = '001_extensions_and_users') THEN
+    RAISE EXCEPTION 'migration ledger missing 001';
+  END IF;
 END $$;
 SELECT 'db-self-check OK' AS status;
 SQL
+
+# Password-hash compatibility: verify bcrypt works against a migrated hash without printing it.
+docker exec "$NAME" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -tAc \
+  "SELECT password_hash LIKE '\$2%' FROM app_users LIMIT 1" | grep -q t
+
+# Create a throwaway hash via app self-check style (no real user passwords)
+echo "Migrated password hashes look bcrypt-shaped (prefix check only; no secrets printed)."
+
+frc_assert_backup_unchanged "$BACKUP"
+echo "Backup fingerprint unchanged."

@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 
-import { sql } from "@/server/db";
+import { db } from "@/server/db";
 
 const SESSION_DAYS = 30;
 export const SESSION_COOKIE = "frc_session";
@@ -13,8 +13,7 @@ export async function createSession(userId: string): Promise<{ token: string; ex
   const token = randomBytes(32).toString("base64url");
   const tokenHash = hashSessionToken(token);
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
-  const db = sql();
-  await db`
+  await db()`
     INSERT INTO sessions (user_id, token_hash, expires_at)
     VALUES (${userId}, ${tokenHash}, ${expiresAt})
   `;
@@ -22,16 +21,14 @@ export async function createSession(userId: string): Promise<{ token: string; ex
 }
 
 export async function deleteSession(token: string): Promise<void> {
-  const db = sql();
-  await db`DELETE FROM sessions WHERE token_hash = ${hashSessionToken(token)}`;
+  await db()`DELETE FROM sessions WHERE token_hash = ${hashSessionToken(token)}`;
 }
 
 export async function resolveSession(
   token: string | undefined | null,
 ): Promise<{ userId: string; email: string; isAdmin: boolean } | null> {
   if (!token) return null;
-  const db = sql();
-  const rows = await db`
+  const rows = await db()`
     SELECT u.id, u.email,
       EXISTS (
         SELECT 1 FROM user_roles r WHERE r.user_id = u.id AND r.role = 'admin'

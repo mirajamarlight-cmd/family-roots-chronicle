@@ -25,11 +25,12 @@
 
 ### Stage 2 — Backend dual-run
 
-- [ ] `DATABASE_URL` server client + auth sessions
-- [ ] Port read path (`fetchFamilyGraph`) behind `DATA_BACKEND=postgres|supabase`
-- [ ] Port mutations and join/admin
-- [ ] Replace Realtime with polling/invalidation
-- [ ] Keep Supabase path default until staging sign-off
+- [x] `DATABASE_URL` server client + auth sessions (cookie `frc_session`)
+- [x] Port read path (`fetchFamilyGraph`) behind `DATA_BACKEND=postgres|supabase`
+- [x] Port mutations and join/admin (dual-run in lib + serverFns)
+- [x] Replace Realtime with polling/invalidation when `DATA_BACKEND=postgres`
+- [x] Keep Supabase path default until staging sign-off
+- [x] Loader safeguards: `FRC_TARGET_KIND` + `FRC_CONFIRM=REPLACE_ALL_DATA` (`bun run db:safety-check`)
 
 ### Stage 3 — Staging acceptance checklist
 

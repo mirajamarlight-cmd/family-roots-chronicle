@@ -3,17 +3,21 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+import { dataBackend } from "@/lib/data-backend";
 import { approveSubmission, fetchPendingSubmissions, rejectSubmission } from "@/lib/submissions";
 
 export function useAdminSubmissions(onApproved?: (personId: string) => void) {
   const queryClient = useQueryClient();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const pg = dataBackend() === "postgres";
   const query = useQuery({
     queryKey: ["pending-submissions"],
     queryFn: fetchPendingSubmissions,
+    refetchInterval: pg ? 10_000 : false,
   });
 
   useEffect(() => {
+    if (pg) return;
     const channel = supabase
       .channel("admin-submissions")
       .on("postgres_changes", { event: "*", schema: "public", table: "person_submissions" }, () => {
@@ -26,7 +30,7 @@ export function useAdminSubmissions(onApproved?: (personId: string) => void) {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [queryClient, pg]);
 
   const run = async (id: string, kind: "approve" | "reject") => {
     setBusyId(id);

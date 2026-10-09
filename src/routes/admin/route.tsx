@@ -66,7 +66,7 @@ function AdminLayout() {
             <Button asChild>
               <Link to="/join">Add yourself</Link>
             </Button>
-            <Button variant="outline" onClick={() => supabase.auth.signOut()}>
+            <Button variant="outline" onClick={() => void import("@/lib/auth-sign-out").then(({ signOutEverywhere }) => signOutEverywhere())}>
               Sign out
             </Button>
           </div>
