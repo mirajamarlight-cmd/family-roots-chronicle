@@ -1,12 +1,11 @@
-import { Maximize2, Minimize2, Plus, Search, SlidersHorizontal, UserPlus } from "lucide-react";
+import { Maximize2, Minimize2, Plus, SlidersHorizontal, UserPlus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AccessibleFamilyTree } from "@/components/AccessibleFamilyTree";
 import { BranchPicker } from "@/components/BranchPicker";
 import { GenerationPills } from "@/components/GenerationPills";
-import { TreePersonSearch } from "@/components/TreePersonSearch";
+import { TreeNameFilter } from "@/components/TreeNameFilter";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -138,18 +137,6 @@ export function AdminPeopleTree({
     setDebouncedQuery("");
   }, []);
 
-  const focusPerson = useCallback(
-    (id: string) => {
-      const roots = [rootId, ...extraRoots].filter((id): id is string => !!id);
-      const next: string[] = [];
-      for (const r of roots) next.push(...ancestorsOnlyToExpand(graph, r, [id]));
-      setExpanded((prev) => new Set([...prev, ...next]));
-      setFocusedId(id);
-      onSelect(id);
-    },
-    [graph, rootId, extraRoots, onSelect],
-  );
-
   const listVisible = useMemo(() => {
     if (!filterVisibility.active) return new Set(graph.people.map((p) => p.id));
     return filterVisibility.visible;
@@ -248,7 +235,7 @@ export function AdminPeopleTree({
     <div className="mx-auto max-w-4xl space-y-2 p-2 sm:p-3">
       <div className={cn("sticky top-0 z-20 space-y-2 bg-muted/10 pb-2 pt-1 backdrop-blur sm:rounded-2xl sm:border sm:border-border/60 sm:bg-card/80 sm:p-3 sm:shadow-sm")}>
       <div className="flex items-center gap-2 sm:hidden">
-        <TreePersonSearch graph={graph} onSelectPerson={focusPerson} placeholder="Find someone…" />
+        <TreeNameFilter value={listQuery} onChange={setListQuery} />
         <Button
           type="button"
           size="icon"
@@ -281,12 +268,7 @@ export function AdminPeopleTree({
       </div>
 
       <div className="hidden flex-wrap items-center gap-2 sm:flex">
-        <TreePersonSearch
-          graph={graph}
-          onSelectPerson={focusPerson}
-          className="max-w-xs"
-          placeholder="Find someone…"
-        />
+        <TreeNameFilter value={listQuery} onChange={setListQuery} className="max-w-xs" />
         {branches.length > 0 && (
           <BranchPicker branches={branches} value={branchId} onChange={setBranchId} />
         )}
@@ -305,19 +287,6 @@ export function AdminPeopleTree({
       </div>
 
       <div className="rounded-2xl border border-border/70 bg-card/80 p-4 leaf-shadow sm:p-5">
-        <div className="mb-4 flex flex-wrap items-center gap-2 border-b border-border/60 pb-4">
-          <div className="relative min-w-[140px] flex-1">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={listQuery}
-              onChange={(e) => setListQuery(e.target.value)}
-              placeholder="Filter names in this list…"
-              aria-label="Filter list by name"
-              className="rounded-full pl-9"
-            />
-          </div>
-        </div>
-
         {isEmpty ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
             No one matches your filters. Try clearing them, choosing a different generation, or

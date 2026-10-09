@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -284,6 +283,12 @@ function InspectorBody({
           </div>
         </InspectorSection>
 
+        {draft.id && (
+          <InspectorSection title="Relationships" description="Parents, children, and siblings.">
+            <RelationshipManager graph={graph} personId={draft.id} embedded />
+          </InspectorSection>
+        )}
+
         <InspectorSection title="Life details" description="Birth, death, and living status.">
           <div className="space-y-4">
             <DualDateField
@@ -335,15 +340,6 @@ function InspectorBody({
             className="min-h-[88px] resize-y bg-background"
           />
         </InspectorSection>
-
-        {draft.id && (
-          <>
-            <Separator className="opacity-60" />
-            <InspectorSection title="Relationships" description="Parents, children, and siblings.">
-              <RelationshipManager graph={graph} personId={draft.id} embedded />
-            </InspectorSection>
-          </>
-        )}
 
         {draft.id && (
           <PersonContact

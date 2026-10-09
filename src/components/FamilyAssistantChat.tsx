@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { AssistantAction } from "@/lib/family-assistant-actions";
 import { familyAssistantChat } from "@/lib/family-assistant.functions";
 import { familyAssistantExecute } from "@/lib/family-assistant-execute.functions";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { fetchPendingSubmissions } from "@/lib/submissions";
 import { cn } from "@/lib/utils";
 
@@ -42,9 +43,15 @@ const STARTER_PROMPTS = [
 type FamilyAssistantChatProps = {
   selectedPersonId?: string | null;
   onOpenPerson?: (personId: string) => void;
+  inspectorOpen?: boolean;
 };
 
-export function FamilyAssistantChat({ selectedPersonId, onOpenPerson }: FamilyAssistantChatProps) {
+export function FamilyAssistantChat({
+  selectedPersonId,
+  onOpenPerson,
+  inspectorOpen = false,
+}: FamilyAssistantChatProps) {
+  const isMobile = useIsMobile();
   const chatFn = useServerFn(familyAssistantChat);
   const executeFn = useServerFn(familyAssistantExecute);
   const queryClient = useQueryClient();
@@ -135,7 +142,13 @@ export function FamilyAssistantChat({ selectedPersonId, onOpenPerson }: FamilyAs
       <SheetTrigger asChild>
         <Button
           size="icon"
-          className="fixed bottom-4 right-4 z-40 size-12 rounded-full shadow-lg"
+          className={cn(
+            "fixed bottom-4 z-40 size-12 rounded-full shadow-lg",
+            inspectorOpen && isMobile && "hidden",
+            inspectorOpen && !isMobile
+              ? "right-[calc(22rem+1rem)] xl:right-[calc(24rem+1rem)]"
+              : "right-4",
+          )}
           aria-label="Open family assistant"
         >
           <MessageSquare className="size-5" />

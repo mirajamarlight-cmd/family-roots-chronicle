@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 import { BranchPicker } from "@/components/BranchPicker";
 import { GenerationPills } from "@/components/GenerationPills";
+import { TreeNameFilter } from "@/components/TreeNameFilter";
 import { TreePersonSearch } from "@/components/TreePersonSearch";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +40,8 @@ type Props = {
   onCollapse: () => void;
   view: "canvas" | "list";
   onViewChange: (view: "canvas" | "list") => void;
+  listQuery?: string;
+  onListQueryChange?: (query: string) => void;
 };
 
 export function TreeToolbar({
@@ -59,6 +62,8 @@ export function TreeToolbar({
   onCollapse,
   view,
   onViewChange,
+  listQuery = "",
+  onListQueryChange,
 }: Props) {
   const isMobile = useIsMobile();
   const [showCoachmark, setShowCoachmark] = useState(false);
@@ -157,6 +162,17 @@ export function TreeToolbar({
     </Button>
   );
 
+  const nameSearch =
+    view === "list" && onListQueryChange ? (
+      <TreeNameFilter
+        value={listQuery}
+        onChange={onListQueryChange}
+        className="max-w-xs"
+      />
+    ) : (
+      <TreePersonSearch graph={graph} onSelectPerson={onSelectPerson} className="max-w-xs" />
+    );
+
   return (
     <div className="relative z-30 flex shrink-0 flex-col gap-2 px-3 pt-2 sm:px-4 sm:pt-3">
       {showCoachmark && (
@@ -170,15 +186,19 @@ export function TreeToolbar({
             <X className="size-3.5" />
           </button>
           <p className="pr-5">
-            Search by name to jump to someone · tap a person for their profile · use the chevron to
-            expand a branch · switch to List for accessible navigation
+            Search by name to jump or filter the list · tap a person for their profile · use the
+            chevron to expand a branch
           </p>
         </div>
       )}
 
       <div className="flex items-center gap-2 sm:hidden">
         {homeButton}
-        <TreePersonSearch graph={graph} onSelectPerson={onSelectPerson} />
+        {view === "list" && onListQueryChange ? (
+          <TreeNameFilter value={listQuery} onChange={onListQueryChange} />
+        ) : (
+          <TreePersonSearch graph={graph} onSelectPerson={onSelectPerson} />
+        )}
         {viewToggle}
         <Sheet open={optionsOpen} onOpenChange={setOptionsOpen}>
           <SheetTrigger asChild>
@@ -206,7 +226,7 @@ export function TreeToolbar({
         <span className={cn(chip, "px-3 py-1.5 text-xs text-muted-foreground")}>
           Rooted at <span className="font-medium text-foreground">{rootLabel}</span>
         </span>
-        <TreePersonSearch graph={graph} onSelectPerson={onSelectPerson} className="max-w-xs" />
+        {nameSearch}
         {viewToggle}
         {branches.length > 0 && (
           <BranchPicker branches={branches} value={branchPickerValue} onChange={onBranchChange} />
@@ -225,6 +245,10 @@ export function TreeToolbar({
       </div>
 
       <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 pb-0.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+        {isMobile && branches.length > 0 && (
+          <BranchPicker branches={branches} value={branchPickerValue} onChange={onBranchChange} />
+        )}
+        {isMobile && expandCollapseButtons}
         <GenerationPills maxGen={maxGen} gen={gen} onGenChange={onGenChange} />
         {isMobile && filtersActive && (
           <span className="shrink-0 self-center text-xs text-muted-foreground">

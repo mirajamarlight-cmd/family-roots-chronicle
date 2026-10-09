@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { MousePointerClick } from "lucide-react";
 import { useEffect } from "react";
 import { z } from "zod";
@@ -23,6 +23,7 @@ export const Route = createFileRoute("/admin/tree")({
 
 function AdminTreePage() {
   const { person: personFromUrl } = Route.useSearch();
+  const navigate = useNavigate({ from: "/admin/tree" });
   const { data: graph, isLoading: graphLoading } = useFamilyGraph();
   const isMobile = useIsMobile();
   const {
@@ -43,6 +44,13 @@ function AdminTreePage() {
     if (!personFromUrl || !graph?.byId.has(personFromUrl)) return;
     openPerson(personFromUrl);
   }, [personFromUrl, graph, openPerson]);
+
+  const close = () => {
+    closeEditor();
+    if (personFromUrl) {
+      void navigate({ search: (prev) => ({ ...prev, person: undefined }), replace: true });
+    }
+  };
 
   const addLabel = selectedId ? "Add child" : "Add person";
   const editing = draft?.id ? graph?.byId.get(draft.id) : undefined;
@@ -79,7 +87,7 @@ function AdminTreePage() {
                   }
                 : undefined
             }
-            onClose={closeEditor}
+            onClose={close}
             busy={busy}
           />
         )}
@@ -97,14 +105,18 @@ function AdminTreePage() {
             <div className="space-y-1">
               <p className="font-display text-sm font-medium">Select someone to edit</p>
               <p className="text-xs leading-relaxed text-muted-foreground">
-                Click a name in the tree, or use Find someone to jump there. The + button on each row adds a child.
+                Click a name in the tree, or search above to filter the list. The + button on each row adds a child.
               </p>
             </div>
           </aside>
         )}
       </div>
 
-      <FamilyAssistantChat selectedPersonId={selectedId} onOpenPerson={openPerson} />
+      <FamilyAssistantChat
+        selectedPersonId={selectedId}
+        onOpenPerson={openPerson}
+        inspectorOpen={!!draft}
+      />
     </div>
   );
 }

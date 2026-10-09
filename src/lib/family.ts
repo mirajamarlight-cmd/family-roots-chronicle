@@ -396,6 +396,19 @@ export function collectSubtreeIds(graph: FamilyGraph, rootId: string): Set<strin
   return all;
 }
 
+/** Root that contains `personId`: keep current, else the main tree, else their own ancestor root. */
+export function rootContainingPerson(
+  graph: FamilyGraph,
+  currentRoot: string,
+  personId: string,
+): string {
+  if (collectSubtreeIds(graph, currentRoot).has(personId)) return currentRoot;
+  const canon = canonicalRootId(graph);
+  if (canon && collectSubtreeIds(graph, canon).has(personId)) return canon;
+  const chain = lineageChain(graph, personId);
+  return chain[0]?.id ?? personId;
+}
+
 export function maxGeneration(graph: FamilyGraph): number {
   if (!graph.people.length) return 0;
   return Math.max(...graph.people.map((p) => (graph.depthOf.get(p.id) ?? 0) + 1));

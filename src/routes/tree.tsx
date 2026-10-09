@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useFamilyGraph } from "@/hooks/useFamily";
-import { ancestryPath, canonicalRootId, collectSubtreeIds, effectiveDisplayName, listBranches, maxGeneration, pathWithinRoot } from "@/lib/family";
+import { ancestryPath, canonicalRootId, collectSubtreeIds, effectiveDisplayName, listBranches, maxGeneration, pathWithinRoot, rootContainingPerson } from "@/lib/family";
 import { ancestorsToExpand, computeVisibility } from "@/lib/tree-filters";
 import { defaultExpanded, loadTreeState, saveTreeState } from "@/lib/tree-state";
 import { SITE_NAME } from "@/lib/brand";
@@ -30,6 +30,7 @@ const searchSchema = z.object({
   person: z.string().optional(),
   root: z.string().optional(),
   view: z.enum(["canvas", "list"]).optional(),
+  gen: z.coerce.number().int().positive().optional().catch(undefined),
 });
 
 const EXPAND_ALL_THRESHOLD = 150;
@@ -55,18 +56,18 @@ export const Route = createFileRoute("/tree")({
 });
 
 function TreePage() {
-  const { person: personParam, root: rootParam, view: viewParam } = Route.useSearch();
+  const { person: personParam, root: rootParam, view: viewParam, gen: genParam } = Route.useSearch();
   const navigate = useNavigate({ from: "/tree" });
   const { data: graph, isLoading, error, refetch } = useFamilyGraph();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<string | null>(null);
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
-  const [gen, setGen] = useState<number | null>(null);
   const [listQuery, setListQuery] = useState("");
   const [liveMessage, setLiveMessage] = useState("");
   const [expandConfirmOpen, setExpandConfirmOpen] = useState(false);
   const [pendingExpandCount, setPendingExpandCount] = useState(0);
   const view = viewParam ?? "canvas";
+  const gen = genParam ?? null;
   const hydratedRoot = useRef<string | null>(null);
 
   const rootId = useMemo(() => {
@@ -199,12 +200,25 @@ function TreePage() {
 
   const focusInTree = useCallback(
     (id: string) => {
-      if (!graph) return;
+      if (!graph || !rootId) return;
+      const nextRoot = rootContainingPerson(graph, rootId, id);
+      const canon = canonicalRootId(graph);
+      if (nextRoot !== rootId) {
+        navigate({
+          search: (prev) => ({
+            ...prev,
+            root: nextRoot === canon ? undefined : nextRoot,
+            person: id,
+          }),
+          replace: true,
+        });
+        return;
+      }
       const path = ancestryPath(graph, id).map((p) => p.id);
       setExpanded((prev) => new Set([...prev, ...path, id]));
       select(id);
     },
-    [graph, select],
+    [graph, rootId, navigate, select],
   );
 
   const closePanel = useCallback(() => {
@@ -284,17 +298,26 @@ function TreePage() {
       if (canon) setExpanded(defaultExpanded(graph, canon));
     }
     navigate({
-      search: (prev) => ({ ...prev, root: undefined, person: undefined }),
+      search: (prev) => ({ ...prev, root: undefined, person: undefined, gen: undefined }),
       replace: true,
     });
   }, [navigate, graph, rootId]);
 
   const clearFilters = useCallback(() => {
-    setGen(null);
     setListQuery("");
-  }, []);
+    navigate({ search: (prev) => ({ ...prev, gen: undefined }), replace: true });
+  }, [navigate]);
 
-  const branchPickerValue = rootParam && branches.some((b) => b.id === rootParam) ? rootParam : "";
+  const branchPickerValue = (() => {
+    const canon = graph ? canonicalRootId(graph) : null;
+    if (!rootId || !canon || rootId === canon) return "";
+    return rootId;
+  })();
+  const pickerBranches = useMemo(() => {
+    if (!graph || !rootId || !branchPickerValue) return branches;
+    if (branches.some((b) => b.id === rootId)) return branches;
+    return [{ id: rootId, name: effectiveDisplayName(graph, rootId) }, ...branches];
+  }, [graph, rootId, branchPickerValue, branches]);
   const breadcrumbFocusId = selected ?? personParam ?? rootId;
 
   const breadcrumbPath = useMemo(() => {
@@ -339,7 +362,7 @@ function TreePage() {
             <TreeToolbar
               graph={graph}
               rootLabel={rootLabel}
-              branches={branches}
+              branches={pickerBranches}
               branchPickerValue={branchPickerValue}
               onBranchChange={(branchId) =>
                 navigate({
@@ -353,7 +376,12 @@ function TreePage() {
               onSelectPerson={focusInTree}
               onHome={goHome}
               gen={gen}
-              onGenChange={setGen}
+              onGenChange={(next) =>
+                navigate({
+                  search: (prev) => ({ ...prev, gen: next ?? undefined }),
+                  replace: true,
+                })
+              }
               maxGen={maxGen}
               matchCount={filterVisibility.matchCount}
               filtersActive={filterVisibility.active}
@@ -362,6 +390,8 @@ function TreePage() {
               onCollapse={collapseToDefault}
               view={view}
               onViewChange={setView}
+              listQuery={listQuery}
+              onListQueryChange={setListQuery}
             />
 
             <div className="relative flex min-h-0 flex-1">
@@ -393,6 +423,7 @@ function TreePage() {
                       onFocusNode={setFocusedNodeId}
                       onToggleDeep={toggleDeep}
                       onClosePanel={selected ? closePanel : undefined}
+                      panelOpen={!!selected}
                     />
                   ) : (
                     <FamilyTreeListView
@@ -405,12 +436,10 @@ function TreePage() {
                       focusedId={focusedNodeId ?? selected ?? rootId}
                       onFocusId={setFocusedNodeId}
                       listQuery={listQuery}
-                      onListQueryChange={setListQuery}
                       visible={listVisible}
                       selfMatch={filterVisibility.selfMatch}
-                      matchCount={filterVisibility.matchCount}
                       filtersActive={filterVisibility.active}
-                      onClearFilters={clearFilters}
+                      matchCount={filterVisibility.matchCount}
                     />
                   )}
                 </div>
@@ -419,6 +448,7 @@ function TreePage() {
               <PersonPanel
                 graph={graph}
                 personId={selected}
+                currentRootId={rootId}
                 onClose={closePanel}
                 onNavigatePerson={focusInTree}
                 onViewBranch={viewBranch}

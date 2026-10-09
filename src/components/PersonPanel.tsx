@@ -29,25 +29,26 @@ function Names({
   onSelect: (id: string) => void;
 }) {
   if (!ids.length) return <p className="text-sm text-muted-foreground">—</p>;
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {ids.map((id) => (
-        <button
-          key={id}
-          type="button"
-          onClick={() => onSelect(id)}
-          className="rounded-full border border-border bg-secondary/60 px-2.5 py-1 text-xs transition-colors hover:bg-secondary"
-        >
-          {effectiveDisplayName(graph, id)}
-        </button>
-      ))}
-    </div>
-  );
+  const chips = ids.map((id) => (
+    <button
+      key={id}
+      type="button"
+      onClick={() => onSelect(id)}
+      className="rounded-full border border-border bg-secondary/60 px-2.5 py-1 text-xs transition-colors hover:bg-secondary"
+    >
+      {effectiveDisplayName(graph, id)}
+    </button>
+  ));
+  if (ids.length <= 8) {
+    return <div className="flex flex-wrap gap-1.5">{chips}</div>;
+  }
+  return <div className="flex max-h-36 flex-wrap content-start gap-1.5 overflow-y-auto pr-1">{chips}</div>;
 }
 
 function PanelBody({
   graph,
   person,
+  currentRootId,
   onClose,
   onNavigatePerson,
   onViewBranch,
@@ -55,6 +56,7 @@ function PanelBody({
 }: {
   graph: FamilyGraph;
   person: Person;
+  currentRootId: string | null;
   onClose: () => void;
   onNavigatePerson: (id: string) => void;
   onViewBranch?: ((branchId: string) => void) | undefined;
@@ -104,7 +106,7 @@ function PanelBody({
         )}
       </div>
 
-      {branchId && (
+      {branchId && branchId !== currentRootId && (
         <Button
           variant="outline"
           size="sm"
@@ -146,12 +148,14 @@ function PanelBody({
 export function PersonPanel({
   graph,
   personId,
+  currentRootId = null,
   onClose,
   onNavigatePerson,
   onViewBranch,
 }: {
   graph: FamilyGraph;
   personId: string | null;
+  currentRootId?: string | null;
   onClose: () => void;
   onNavigatePerson: (id: string) => void;
   onViewBranch?: ((branchId: string) => void) | undefined;
@@ -209,6 +213,7 @@ export function PersonPanel({
             onClose={onClose}
             onNavigatePerson={onNavigatePerson}
             onViewBranch={onViewBranch}
+            currentRootId={currentRootId}
             closeRef={closeRef}
           />
         </aside>
@@ -226,14 +231,15 @@ export function PersonPanel({
         "animate-in slide-in-from-right-4 duration-200",
       )}
     >
-      <PanelBody
-        graph={graph}
-        person={person}
-        onClose={onClose}
-        onNavigatePerson={onNavigatePerson}
-        onViewBranch={onViewBranch}
-        closeRef={closeRef}
-      />
+          <PanelBody
+            graph={graph}
+            person={person}
+            currentRootId={currentRootId}
+            onClose={onClose}
+            onNavigatePerson={onNavigatePerson}
+            onViewBranch={onViewBranch}
+            closeRef={closeRef}
+          />
     </aside>
   );
 }

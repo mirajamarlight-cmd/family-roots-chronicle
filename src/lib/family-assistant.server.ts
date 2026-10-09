@@ -51,6 +51,15 @@ const READ_TOOL_NAMES = new Set<string>([
 const MAX_TOOL_ROUNDS = 8;
 
 function llmConfig(): { apiKey: string; baseUrl: string; model: string } {
+  const geminiKey = process.env["GEMINI_API_KEY"]?.trim();
+  if (geminiKey) {
+    return {
+      apiKey: geminiKey,
+      baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+      model: process.env["GEMINI_MODEL"]?.trim() || "gemini-3.8-flash",
+    };
+  }
+
   const groqKey = process.env["GROQ_API_KEY"]?.trim();
   if (groqKey) {
     return {
@@ -70,7 +79,7 @@ function llmConfig(): { apiKey: string; baseUrl: string; model: string } {
   }
 
   throw new Error(
-    "Family assistant is not configured. Set GROQ_API_KEY or OPENAI_API_KEY in your server environment.",
+    "Family assistant is not configured. Set GEMINI_API_KEY, GROQ_API_KEY, or OPENAI_API_KEY in your server environment.",
   );
 }
 

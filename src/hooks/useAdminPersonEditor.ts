@@ -79,7 +79,11 @@ export function useAdminPersonEditor(graph: FamilyGraph | undefined) {
     setDraft({ ...emptyPersonDraft, parent_id: parentId });
   }, []);
 
-  const closeEditor = useCallback(() => setDraft(null), []);
+  const closeEditor = useCallback(() => {
+    setDraft(null);
+    setSelectedId(null);
+    draftDirtyRef.current = false;
+  }, []);
 
   const save = useCallback(async () => {
     if (!draft || !draft.first_name.trim()) {
@@ -149,20 +153,28 @@ export function useAdminPersonEditor(graph: FamilyGraph | undefined) {
         return;
       }
     }
-    if (draft.parent_id) {
+    const parentId = draft.parent_id;
+    if (parentId) {
       const { error: linkError } = await supabase.from("parent_child").insert({
-        parent_id: draft.parent_id,
+        parent_id: parentId,
         child_id: data.id,
         relationship_type: "biological",
       });
       if (linkError) toast.error(linkError.message);
     }
     setBusy(false);
-    setSelectedId(data.id);
-    setDraft({ ...draft, id: data.id, parent_id: "" });
+    draftDirtyRef.current = false;
+    const parent = parentId ? graph?.byId.get(parentId) : undefined;
+    if (parent) {
+      setSelectedId(parent.id);
+      setDraft(personToDraft(parent));
+    } else {
+      setSelectedId(data.id);
+      setDraft({ ...draft, id: data.id, parent_id: "" });
+    }
     toast.success("Saved");
     void queryClient.invalidateQueries({ queryKey: ["family-graph"] });
-  }, [draft, queryClient]);
+  }, [draft, graph, queryClient]);
 
   const remove = useCallback(
     async (p: Person) => {

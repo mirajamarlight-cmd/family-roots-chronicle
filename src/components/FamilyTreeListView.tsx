@@ -1,8 +1,4 @@
-import { Search } from "lucide-react";
-
 import { AccessibleFamilyTree } from "@/components/AccessibleFamilyTree";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { effectiveDisplayName, type FamilyGraph } from "@/lib/family";
 import { cn } from "@/lib/utils";
 
@@ -16,12 +12,10 @@ type Props = {
   focusedId?: string | null;
   onFocusId?: (id: string) => void;
   listQuery: string;
-  onListQueryChange: (query: string) => void;
   visible: Set<string>;
   selfMatch: Set<string>;
-  matchCount: number;
   filtersActive: boolean;
-  onClearFilters: () => void;
+  matchCount: number;
   className?: string;
 };
 
@@ -35,12 +29,10 @@ export function FamilyTreeListView({
   focusedId = null,
   onFocusId,
   listQuery,
-  onListQueryChange,
   visible,
   selfMatch,
-  matchCount,
   filtersActive,
-  onClearFilters,
+  matchCount,
   className,
 }: Props) {
   const rootName = effectiveDisplayName(graph, rootId);
@@ -54,29 +46,6 @@ export function FamilyTreeListView({
           className,
         )}
       >
-        <div className="pointer-events-auto mb-4 flex flex-wrap items-center gap-2 border-b border-border/60 pb-4">
-          <div className="relative min-w-[140px] flex-1">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={listQuery}
-              onChange={(e) => onListQueryChange(e.target.value)}
-              placeholder="Filter names in this list…"
-              aria-label="Filter list by name"
-              className="rounded-full pl-9"
-            />
-          </div>
-          {filtersActive && (
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {matchCount} {matchCount === 1 ? "match" : "matches"}
-            </span>
-          )}
-          {filtersActive && (
-            <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={onClearFilters}>
-              Clear filters
-            </Button>
-          )}
-        </div>
-
         {isEmpty ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
             No one matches your filters in {rootName}&apos;s branch. Try clearing filters or choosing a

@@ -200,6 +200,7 @@ type Props = {
   /** When set, only these nodes (and their path children) appear in the layout. */
   visibleIds?: Set<string> | undefined;
   ariaLabel?: string | undefined;
+  panelOpen?: boolean | undefined;
 };
 
 function buildFlow(
@@ -322,6 +323,7 @@ function Canvas({
   accentEdgeIds,
   visibleIds,
   ariaLabel = "Family tree",
+  panelOpen = false,
 }: Props) {
   const duplicateNames = useMemo(() => duplicateEffectiveNames(graph), [graph]);
   const { nodes, edges } = useMemo(
@@ -387,9 +389,14 @@ function Canvas({
     if (!nodes.length || fitForRoot.current === rootId) return;
     fitForRoot.current = rootId;
     requestAnimationFrame(() => {
-      flow.fitView({ padding: 0.22, maxZoom: 1.15, minZoom: 0.4, duration: 300 });
+      flow.fitView({
+        padding: panelOpen ? 0.16 : 0.1,
+        maxZoom: 1.35,
+        minZoom: 0.35,
+        duration: 300,
+      });
     });
-  }, [rootId, nodes.length, flow]);
+  }, [rootId, nodes.length, flow, panelOpen]);
 
   useEffect(() => {
     fitForRoot.current = null;
@@ -413,17 +420,25 @@ function Canvas({
     if (!changedId) for (const id of prev) if (!expanded.has(id)) changedId = id;
     if (!changedId) return;
     const target = changedId;
-    const ids = [target, ...(graph.childrenOf.get(target) ?? [])].map((id) => ({ id }));
-    setSettling(true);
+    const kids = graph.childrenOf.get(target) ?? [];
+    const ids = [target, ...kids].map((id) => ({ id }));
+    const wide = kids.length > 6;
+    if (wide) setSettling(true);
     const timer = setTimeout(() => {
-      void flow.fitView({ nodes: ids, padding: 0.25, minZoom: 0.55, maxZoom: 0.95, duration: 400 });
+      void flow.fitView({
+        nodes: ids,
+        padding: panelOpen ? 0.16 : 0.12,
+        minZoom: 0.25,
+        maxZoom: wide ? 0.8 : 0.95,
+        duration: 400,
+      });
     }, 80);
     const done = setTimeout(() => setSettling(false), 560);
     return () => {
       clearTimeout(timer);
       clearTimeout(done);
     };
-  }, [expanded, flow, graph]);
+  }, [expanded, flow, graph, panelOpen]);
 
   // Restore keyboard focus to the toggled node's button after re-layout,
   // and again once the fit-view animation finishes.
@@ -450,8 +465,8 @@ function Canvas({
     const node = flow.getNode(selectedId);
     if (node)
       flow.setCenter(node.position.x + NODE_WIDTH / 2, node.position.y + 40, {
-        zoom: 0.9,
-        duration: 500,
+        zoom: flow.getZoom(),
+        duration: 400,
       });
   }, [selectedId, flow, nodes.length]);
 
