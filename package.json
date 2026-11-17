@@ -15,6 +15,7 @@
     "check:submissions": "node --experimental-strip-types src/lib/submissions.self-check.ts",
     "check:contact-format": "node --experimental-strip-types src/lib/contact-format.self-check.ts",
     "check:family": "node --experimental-strip-types src/lib/family.self-check.ts",
+    "check:tree-graph": "bun src/lib/tree-graph.self-check.ts",
     "check:assistant": "bun src/lib/family-assistant.self-check.ts",
     "check:ethiopian-calendar": "node --experimental-strip-types src/lib/ethiopian-calendar.self-check.ts",
     "check:statistics": "bun src/lib/family-statistics.self-check.ts",

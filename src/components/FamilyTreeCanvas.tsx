@@ -6,180 +6,167 @@ import {
   Position,
   ReactFlow,
   ReactFlowProvider,
+  useStore,
   type Edge,
   type Node,
   type NodeProps,
   useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import { DeceasedBadge } from "@/components/DeceasedBadge";
-import { PersonAvatarBadge } from "@/components/person-identity";
-import { cn } from "@/lib/utils";
-import { duplicateEffectiveNames, personContextLabel, personIsDeceased, birthOrderAmongSiblings, type FamilyGraph } from "@/lib/family";
+import { DECEASED_LABEL, birthOrderAmongSiblings, duplicateEffectiveNames, effectiveDisplayName, personContextLabel, personIsDeceased, type FamilyGraph } from "@/lib/family";
+import { personPortraitUrl } from "@/lib/brand";
 import { branchColor } from "@/lib/colors";
 import type { FilterVisibility } from "@/lib/tree-filters";
+import {
+  TREE_NODE_H,
+  TREE_NODE_W,
+  TREE_PORTRAIT,
+  layoutFamilyCanvas,
+  neighborhood,
+  type TreeDepth,
+} from "@/lib/tree-graph";
+import { cn } from "@/lib/utils";
 
-const NODE_WIDTH = 176;
-const H_GAP = 26;
-const V_GAP = 160;
+const HANDLE = {
+  opacity: 0,
+  pointerEvents: "none" as const,
+  width: 1,
+  height: 1,
+  minWidth: 1,
+  minHeight: 1,
+  border: "none",
+  background: "transparent",
+};
 
 export type TreeNodeData = {
   label: string;
+  fullName: string;
   contextLabel: string | null;
+  photoUrl: string | null;
+  initial: string;
   childCount: number;
   hiddenChildren: boolean;
-  expanded: boolean;
   selected: boolean;
   focused: boolean;
   accent: boolean;
-  depth: number;
-  branchKey: string;
+  lit: boolean;
+  keepName: boolean;
   dimmed: boolean;
   matched: boolean;
   deceased: boolean;
   birthOrder: number | null;
+  siblingCount: number | null;
+  color: string;
 };
 
+type PersonNode = Node<TreeNodeData, "person">;
+
 const TreeHandlersContext = createContext<{
-  graph: FamilyGraph;
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
   onToggleDeep?: ((id: string) => void) | undefined;
 } | null>(null);
 
-function PersonNode({ id, data }: NodeProps) {
-  const d = data as unknown as TreeNodeData;
+function labelOpacity(zoom: number) {
+  if (zoom >= 0.62) return 1;
+  if (zoom <= 0.22) return 0;
+  return (zoom - 0.22) / 0.4;
+}
+
+function PersonPortrait({ id, data }: NodeProps<PersonNode>) {
+  const d = data;
   const handlers = useContext(TreeHandlersContext);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    requestAnimationFrame(() => setMounted(true));
-  }, []);
-
-  const avatarSize = d.depth === 0 ? "xl" : "md";
+  const zoom = useStore((s) => s.transform[2]);
+  const keepLabel = d.keepName || d.selected || d.focused || d.matched || d.accent || d.lit;
+  const order =
+    d.birthOrder != null && d.siblingCount != null ? `${d.birthOrder} of ${d.siblingCount}` : null;
+  const children =
+    d.childCount === 0 ? "No children recorded" : d.childCount === 1 ? "1 child" : `${d.childCount} children`;
+  const portraitMid = TREE_PORTRAIT / 2;
+  const sideInset = (TREE_NODE_W - TREE_PORTRAIT) / 2;
+  const ring =
+    d.selected
+      ? `0 0 0 3px var(--tree-ink), 0 0 0 6px ${d.color}`
+      : d.focused || d.accent
+        ? `0 0 0 2px var(--tree-ink), 0 0 0 4px ${d.color}`
+        : `0 0 0 2px ${d.color}`;
 
   return (
     <div
-      className={cn(
-        "pointer-events-auto relative transition-[opacity,transform] duration-300 ease-out",
-        mounted ? "translate-y-0 scale-100 opacity-100" : "-translate-y-1 scale-95 opacity-0",
-        d.dimmed && "opacity-40",
-      )}
-      style={{ width: NODE_WIDTH }}
+      className={cn("tree-person group relative", d.dimmed && "tree-person-dim")}
+      style={{ width: TREE_NODE_W, height: TREE_NODE_H }}
     >
-      <Handle
-        type="target"
-        position={Position.Top}
-        style={{ opacity: 0, pointerEvents: "none", width: 1, height: 1, minWidth: 1, minHeight: 1 }}
-      />
+      <Handle type="target" id="up" position={Position.Top} style={{ ...HANDLE, left: "50%", top: 0, transform: "translate(-50%, 0)" }} />
+      <Handle type="source" id="down" position={Position.Bottom} style={{ ...HANDLE, left: "50%", top: TREE_PORTRAIT, bottom: "auto", transform: "translate(-50%, 0)" }} />
+      <Handle type="target" id="left" position={Position.Left} style={{ ...HANDLE, left: sideInset, top: portraitMid, transform: "none" }} />
+      <Handle type="source" id="right" position={Position.Right} style={{ ...HANDLE, left: sideInset + TREE_PORTRAIT, right: "auto", top: portraitMid, transform: "none" }} />
+
       <button
         type="button"
         data-node-id={id}
         onClick={() => handlers?.onSelect(id)}
-        aria-label={`Open profile for ${d.label}`}
-        className={cn(
-          "w-full rounded-2xl border bg-card px-3 py-2.5 text-left leaf-shadow transition-all duration-200",
-          "hover:-translate-y-0.5 hover:shadow-md",
-          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-          d.depth === 0 && "bg-gradient-to-b from-primary/8 to-card pt-3",
-          d.selected
-            ? "border-primary ring-2 ring-primary/35"
-            : d.focused
-              ? "border-primary/70 ring-2 ring-primary/20"
-              : d.accent
-                ? "border-primary bg-primary/5 ring-2 ring-primary/45"
-                : "border-border hover:border-primary/45",
-          d.matched && !d.selected && !d.accent && "ring-2 ring-destructive/25",
-        )}
+        onDoubleClick={(e) => {
+          e.preventDefault();
+          if (d.hiddenChildren) handlers?.onToggle(id);
+        }}
+        aria-label={`${d.fullName}, ${children}`}
+        className="flex w-full flex-col items-center gap-1.5 rounded-sm focus-visible:outline-none focus-visible:[&_.tree-portrait]:ring-2 focus-visible:[&_.tree-portrait]:ring-[var(--tree-label)] focus-visible:[&_.tree-portrait]:ring-offset-2 focus-visible:[&_.tree-portrait]:ring-offset-[var(--tree-ink)]"
       >
-        <div className={cn("mb-2 flex justify-center", d.depth > 0 && "mb-1.5")}>
-          <PersonAvatarBadge graph={handlers!.graph} personId={id} size={avatarSize} />
-        </div>
-        <span className="block truncate text-center font-display text-base font-semibold leading-tight">
-          {d.birthOrder != null && (
-            <span className="mr-1 inline-flex size-5 items-center justify-center rounded-full border border-border/70 bg-muted/80 align-middle font-mono text-[10px] font-semibold tabular-nums text-muted-foreground">
-              {d.birthOrder}
+        <span
+          className={cn(
+            "tree-portrait",
+            d.deceased && "tree-portrait-deceased",
+            d.matched && "tree-portrait-match",
+          )}
+          style={{ boxShadow: ring }}
+        >
+          {d.photoUrl ? (
+            <img src={d.photoUrl} alt="" className="tree-portrait-img" />
+          ) : (
+            <span className="tree-portrait-fallback" style={{ background: d.color }} aria-hidden>
+              {d.initial}
             </span>
           )}
-          {d.label}
         </span>
-        {d.deceased && (
-          <span className="mt-1 flex justify-center">
-            <DeceasedBadge compact />
-          </span>
-        )}
-        {d.contextLabel && (
-          <span className="mt-0.5 block truncate text-center text-[10px] leading-tight text-muted-foreground">
-            {d.contextLabel}
-          </span>
-        )}
-        <span className="mt-0.5 block text-center text-xs text-muted-foreground">
-          {d.childCount === 0
-            ? "No children recorded"
-            : d.childCount === 1
-              ? "1 child"
-              : `${d.childCount} children`}
+        <span className="tree-person-label" style={{ opacity: keepLabel ? 1 : labelOpacity(zoom) }}>
+          {d.label}
         </span>
       </button>
 
-      {d.childCount > 0 && (
-        <div className="absolute -bottom-3.5 left-1/2 z-20 -translate-x-1/2">
-          <button
-            type="button"
-            data-toggle-id={id}
-            onClick={(e) => {
-              e.stopPropagation();
-              if ((e.altKey || e.shiftKey) && handlers?.onToggleDeep) handlers.onToggleDeep(id);
-              else handlers?.onToggle(id);
-            }}
-            title={
-              d.expanded
-                ? "Collapse branch (alt-click to collapse all below)"
-                : `Show ${d.childCount} children (alt-click to expand all below)`
-            }
-            aria-label={
-              d.expanded
-                ? `Collapse branch of ${d.label}`
-                : `Expand ${d.childCount} children of ${d.label}`
-            }
-            aria-expanded={d.expanded}
-            className={cn(
-              "flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold leading-none shadow-sm transition-all duration-200",
-              "hover:scale-105 active:scale-95",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-              d.expanded
-                ? "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                : "border-primary/40 bg-primary text-primary-foreground shadow-primary/25 hover:bg-primary/90",
-            )}
-          >
-            {d.expanded ? (
-              <>
-                <ChevronDown className="size-3.5" aria-hidden />
-                Hide
-              </>
-            ) : (
-              <>
-                <ChevronRight className="size-3.5" aria-hidden />
-                {d.childCount}
-              </>
-            )}
-
-          </button>
-        </div>
+      {d.hiddenChildren && (
+        <button
+          type="button"
+          data-toggle-id={id}
+          className="tree-count"
+          aria-label={
+            d.childCount === 1 ? `Show 1 child of ${d.label}` : `Show ${d.childCount} children of ${d.label}`
+          }
+          title="Show children. Alt-click shows the whole branch."
+          onClick={(e) => {
+            e.stopPropagation();
+            if ((e.altKey || e.shiftKey) && handlers?.onToggleDeep) handlers.onToggleDeep(id);
+            else handlers?.onToggle(id);
+          }}
+        >
+          {d.childCount > 99 ? "99+" : d.childCount}
+        </button>
       )}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        style={{ opacity: 0, pointerEvents: "none", width: 1, height: 1, minWidth: 1, minHeight: 1 }}
-      />
+
+      <div className="tree-hover-card" aria-hidden="true">
+        <p className="tree-hover-name">{d.fullName}</p>
+        {d.contextLabel && <p className="tree-hover-meta">{d.contextLabel}</p>}
+        {order && <p className="tree-hover-meta">{order}</p>}
+        {d.deceased && <p className="tree-hover-meta">{DECEASED_LABEL}</p>}
+        <p className="tree-hover-meta">{children}</p>
+        {d.hiddenChildren && <p className="tree-hover-meta">Double-click to open the branch</p>}
+      </div>
     </div>
   );
 }
 
-const nodeTypes = { person: PersonNode };
+const nodeTypes = { person: PersonPortrait };
 
 export type CanvasFilters = Pick<FilterVisibility, "active" | "visible" | "selfMatch">;
 
@@ -197,115 +184,11 @@ type Props = {
   onToggleDeep?: ((id: string) => void) | undefined;
   accentIds?: Set<string> | undefined;
   accentEdgeIds?: Set<string> | undefined;
-  /** When set, only these nodes (and their path children) appear in the layout. */
   visibleIds?: Set<string> | undefined;
   ariaLabel?: string | undefined;
   panelOpen?: boolean | undefined;
+  depth?: TreeDepth | undefined;
 };
-
-function buildFlow(
-  graph: FamilyGraph,
-  rootId: string,
-  expanded: Set<string>,
-  selectedId: string | null,
-  focusedNodeId: string | null,
-  filters: CanvasFilters | undefined,
-  accentIds: Set<string> | undefined,
-  accentEdgeIds: Set<string> | undefined,
-  visibleIds: Set<string> | undefined,
-  duplicateNames: Set<string>,
-): { nodes: Node[]; edges: Edge[] } {
-  const nodes: Node[] = [];
-  const edges: Edge[] = [];
-  let cursor = 0;
-  const placed = new Set<string>();
-  const placedX = new Map<string, number>();
-
-  const layout = (id: string, depth: number): number => {
-    if (placed.has(id)) return placedX.get(id)!;
-
-    const allChildren = graph.childrenOf.get(id) ?? [];
-    const pathChildren = visibleIds ? allChildren.filter((c) => visibleIds.has(c)) : allChildren;
-    const children = expanded.has(id) ? pathChildren : [];
-    let x: number;
-    if (children.length === 0) {
-      x = cursor;
-      cursor += NODE_WIDTH + H_GAP;
-    } else {
-      const positions = children.map((c) => layout(c, depth + 1));
-      x = (positions[0]! + positions[positions.length - 1]!) / 2;
-    }
-    const person = graph.byId.get(id);
-    const shownChildCount = visibleIds ? pathChildren.length : allChildren.length;
-    const filterActive = filters?.active ?? false;
-    const dimmed = filterActive && !(filters?.selfMatch.has(id) ?? false);
-    nodes.push({
-      id,
-      type: "person",
-      position: { x, y: depth * V_GAP },
-      data: {
-        label: person?.first_name ?? "Unknown",
-        contextLabel: person ? personContextLabel(graph, id, duplicateNames) : null,
-        childCount: shownChildCount,
-        hiddenChildren: shownChildCount > 0 && !expanded.has(id),
-        expanded: expanded.has(id),
-        selected: selectedId === id,
-        focused: focusedNodeId === id,
-        accent: accentIds?.has(id) ?? false,
-        depth,
-        branchKey: graph.branchOf.get(id) ?? person?.display_name ?? id,
-        dimmed,
-        matched: filters?.selfMatch.has(id) ?? false,
-        deceased: person ? personIsDeceased(person) : false,
-        birthOrder: birthOrderAmongSiblings(graph, id),
-      } satisfies TreeNodeData as unknown as Record<string, unknown>,
-      draggable: false,
-    });
-    placed.add(id);
-    placedX.set(id, x);
-    for (const c of children) {
-      const edgeId = `${id}-${c}`;
-      const onPath = accentEdgeIds?.has(edgeId) ?? false;
-      edges.push({
-        id: edgeId,
-        source: id,
-        target: c,
-        type: "smoothstep",
-        style: {
-          stroke: onPath ? "var(--primary)" : "var(--border)",
-          strokeWidth: onPath ? 2.8 : 1.6,
-        },
-        zIndex: onPath ? 2 : 0,
-      });
-    }
-    return x;
-  };
-
-  if (graph.byId.has(rootId)) layout(rootId, 0);
-  return { nodes, edges };
-}
-
-function buildNavMaps(nodes: Node[], edges: Edge[]) {
-  const parentOf = new Map<string, string>();
-  const childrenOf = new Map<string, string[]>();
-  for (const edge of edges) {
-    parentOf.set(edge.target, edge.source);
-    const kids = childrenOf.get(edge.source) ?? [];
-    kids.push(edge.target);
-    childrenOf.set(edge.source, kids);
-  }
-  for (const kids of childrenOf.values()) {
-    kids.sort((a, b) => {
-      const na = nodes.find((n) => n.id === a);
-      const nb = nodes.find((n) => n.id === b);
-      return (na?.position.x ?? 0) - (nb?.position.x ?? 0);
-    });
-  }
-  const orderedIds = [...nodes]
-    .sort((a, b) => a.position.y - b.position.y || a.position.x - b.position.x)
-    .map((n) => n.id);
-  return { parentOf, childrenOf, orderedIds };
-}
 
 function Canvas({
   graph,
@@ -324,35 +207,124 @@ function Canvas({
   visibleIds,
   ariaLabel = "Family tree",
   panelOpen = false,
+  depth = "all",
 }: Props) {
   const duplicateNames = useMemo(() => duplicateEffectiveNames(graph), [graph]);
-  const { nodes, edges } = useMemo(
+  const layoutFocus = depth === "all" ? null : (focusedNodeId ?? selectedId ?? rootId);
+  const laid = useMemo(
     () =>
-      buildFlow(
+      layoutFamilyCanvas({
         graph,
         rootId,
         expanded,
-        selectedId,
-        focusedNodeId,
-        filters,
-        accentIds,
-        accentEdgeIds,
+        depth,
+        focusId: layoutFocus,
         visibleIds,
-        duplicateNames,
-      ),
-    [graph, rootId, expanded, selectedId, focusedNodeId, filters, accentIds, accentEdgeIds, visibleIds, duplicateNames],
+      }),
+    [graph, rootId, expanded, depth, layoutFocus, visibleIds],
   );
+
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  // Obsidian-style: only hover dims the rest. Selection keeps the whole depth view readable.
+  const lit = useMemo(() => (hoveredId ? neighborhood(graph, hoveredId, 1) : null), [graph, hoveredId]);
+
+  const placedIds = useMemo(() => new Set(laid.nodes.map((n) => n.id)), [laid.nodes]);
+  const namedCore = useMemo(() => {
+    if (depth === "all") return laid.nodes.length <= 36 ? placedIds : null;
+    if (!layoutFocus) return placedIds;
+    // Depth 2 can be huge — keep names on the focus person and close kin.
+    return new Set([...neighborhood(graph, layoutFocus, 1)].filter((id) => placedIds.has(id)));
+  }, [depth, layoutFocus, graph, placedIds, laid.nodes.length]);
+
+  const nodes = useMemo<PersonNode[]>(() => {
+    return laid.nodes.map((n) => {
+      const person = graph.byId.get(n.id);
+      const kids = graph.childrenOf.get(n.id) ?? [];
+      const shownKids = kids.filter((c) => placedIds.has(c));
+      const parentId = graph.parentsOf.get(n.id)?.[0];
+      const siblingCount = parentId ? (graph.childrenOf.get(parentId)?.length ?? null) : null;
+      const matched = filters?.selfMatch.has(n.id) ?? false;
+      const accent = accentIds?.has(n.id) ?? false;
+      const isLit = lit?.has(n.id) ?? false;
+      const kinDim = Boolean(lit && !isLit);
+      const filterDim = Boolean(filters?.active && !matched);
+      return {
+        id: n.id,
+        type: "person",
+        position: { x: n.x, y: n.y },
+        width: TREE_NODE_W,
+        height: TREE_NODE_H,
+        zIndex: n.id === selectedId || n.id === focusedNodeId || isLit ? 10 : 0,
+        draggable: false,
+        data: {
+          label: person?.first_name ?? "Unknown",
+          fullName: person ? effectiveDisplayName(graph, n.id) : "Unknown",
+          contextLabel: person ? personContextLabel(graph, n.id, duplicateNames) : null,
+          photoUrl: personPortraitUrl(graph, n.id),
+          initial: (person?.first_name?.slice(0, 1) || person?.display_name?.slice(0, 1) || "?").toUpperCase(),
+          childCount: kids.length,
+          hiddenChildren: depth === "all" && kids.length > shownKids.length,
+          selected: selectedId === n.id,
+          focused: focusedNodeId === n.id,
+          accent,
+          lit: isLit,
+          keepName: namedCore?.has(n.id) ?? false,
+          dimmed: !accent && ((kinDim && !matched) || filterDim),
+          matched,
+          deceased: person ? personIsDeceased(person) : false,
+          birthOrder: birthOrderAmongSiblings(graph, n.id),
+          siblingCount,
+          color: branchColor(graph.branchOf.get(n.id) ?? person?.display_name ?? n.id),
+        },
+      };
+    });
+  }, [
+    laid.nodes,
+    graph,
+    placedIds,
+    filters,
+    accentIds,
+    lit,
+    selectedId,
+    focusedNodeId,
+    depth,
+    duplicateNames,
+    namedCore,
+  ]);
+
+  const edges = useMemo<Edge[]>(() => {
+    return laid.edges.map((e) => {
+      const onPath = accentEdgeIds?.has(e.id) ?? false;
+      const endsLit = !lit || (lit.has(e.source) && lit.has(e.target));
+      const dim = !onPath && !endsLit;
+      const spouse = e.kind === "spouse";
+      return {
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle,
+        targetHandle: e.targetHandle,
+        type: spouse ? "straight" : "smoothstep",
+        zIndex: onPath ? 2 : 0,
+        style: {
+          stroke: onPath ? "var(--tree-path)" : spouse ? "var(--tree-spouse)" : "var(--tree-line)",
+          strokeWidth: onPath ? 2.2 : 1.15,
+          strokeDasharray: spouse ? "2 5" : undefined,
+          opacity: dim ? 0.08 : 1,
+        },
+        data: { kind: e.kind },
+      };
+    });
+  }, [laid.edges, accentEdgeIds, lit]);
+
   const flow = useReactFlow();
   const containerRef = useRef<HTMLDivElement>(null);
-  const fitForRoot = useRef<string | null>(null);
-
-  // Remember which node was toggled so keyboard focus returns to its
-  // expand/collapse button once the layout animation settles.
+  const fitKey = useRef<string | null>(null);
   const restoreFocusRef = useRef<string | null>(null);
 
-  const focusToggle = useCallback((id: string) => {
+  const focusNodeButton = useCallback((id: string) => {
     const escaped = typeof CSS !== "undefined" && CSS.escape ? CSS.escape(id) : id;
-    const el = containerRef.current?.querySelector<HTMLElement>(`[data-toggle-id="${escaped}"]`);
+    const el = containerRef.current?.querySelector<HTMLElement>(`[data-node-id="${escaped}"]`);
     el?.focus({ preventScroll: true });
     return Boolean(el);
   }, []);
@@ -377,40 +349,54 @@ function Canvas({
 
   const handlers = useMemo(
     () => ({
-      graph,
       onToggle: handleToggle,
       onSelect,
       onToggleDeep: onToggleDeep ? handleToggleDeep : undefined,
     }),
-    [graph, handleToggle, onSelect, onToggleDeep, handleToggleDeep],
+    [handleToggle, onSelect, onToggleDeep, handleToggleDeep],
   );
 
   useEffect(() => {
-    if (!nodes.length || fitForRoot.current === rootId) return;
-    fitForRoot.current = rootId;
-    requestAnimationFrame(() => {
-      flow.fitView({
-        padding: panelOpen ? 0.16 : 0.1,
-        maxZoom: 1.35,
-        minZoom: 0.35,
-        duration: 300,
-      });
-    });
-  }, [rootId, nodes.length, flow, panelOpen]);
+    if (!nodes.length) return;
+    const key = `${depth}:${depth === "all" ? rootId : layoutFocus}:${panelOpen ? 1 : 0}:${nodes.length}`;
+    if (fitKey.current === key) return;
+    fitKey.current = key;
+    // Depth 2 spreads siblings across a wide canvas. Frame the focus person with
+    // their own children/spouses — parents can sit far left/right of that cluster.
+    const frameIds =
+      depth === "all" || !layoutFocus
+        ? null
+        : (() => {
+            const ids = new Set<string>([layoutFocus]);
+            for (const c of graph.childrenOf.get(layoutFocus) ?? []) if (placedIds.has(c)) ids.add(c);
+            for (const s of graph.spousesOf.get(layoutFocus) ?? []) if (placedIds.has(s)) ids.add(s);
+            if (depth === 1) {
+              for (const p of graph.parentsOf.get(layoutFocus) ?? []) if (placedIds.has(p)) ids.add(p);
+            }
+            return [...ids].map((id) => ({ id }));
+          })();
+    const opts = {
+      padding: panelOpen ? 0.2 : 0.14,
+      maxZoom: depth === "all" ? 1.15 : 1.4,
+      minZoom: depth === "all" ? 0.32 : 0.55,
+      duration: 320,
+    };
+    // Wait one paint so React Flow has the new node positions before fitting.
+    const timer = setTimeout(() => {
+      if (frameIds && frameIds.length > 0) void flow.fitView({ ...opts, nodes: frameIds });
+      else void flow.fitView(opts);
+    }, 40);
+    return () => clearTimeout(timer);
+  }, [rootId, depth, layoutFocus, nodes.length, flow, panelOpen, graph, placedIds]);
 
-  useEffect(() => {
-    fitForRoot.current = null;
-  }, [rootId]);
-
-  // Keep the toggled branch in view when a node is expanded or collapsed.
   const [settling, setSettling] = useState(false);
   const prevExpanded = useRef<Set<string>>(expanded);
   const didInitialExpand = useRef(false);
   useEffect(() => {
+    if (depth !== "all") return;
     const prev = prevExpanded.current;
     prevExpanded.current = expanded;
     if (prev === expanded) return;
-    // Skip the first hydration pass (empty set -> default expansion).
     if (!didInitialExpand.current) {
       didInitialExpand.current = true;
       return;
@@ -419,17 +405,16 @@ function Canvas({
     for (const id of expanded) if (!prev.has(id)) changedId = id;
     if (!changedId) for (const id of prev) if (!expanded.has(id)) changedId = id;
     if (!changedId) return;
-    const target = changedId;
-    const kids = graph.childrenOf.get(target) ?? [];
-    const ids = [target, ...kids].map((id) => ({ id }));
+    const kids = graph.childrenOf.get(changedId) ?? [];
+    const ids = [changedId, ...kids].map((id) => ({ id }));
     const wide = kids.length > 6;
     if (wide) setSettling(true);
     const timer = setTimeout(() => {
       void flow.fitView({
         nodes: ids,
-        padding: panelOpen ? 0.16 : 0.12,
-        minZoom: 0.25,
-        maxZoom: wide ? 0.8 : 0.95,
+        padding: panelOpen ? 0.2 : 0.16,
+        minZoom: 0.32,
+        maxZoom: wide ? 0.95 : 1.2,
         duration: 400,
       });
     }, 80);
@@ -438,81 +423,91 @@ function Canvas({
       clearTimeout(timer);
       clearTimeout(done);
     };
-  }, [expanded, flow, graph, panelOpen]);
+  }, [expanded, depth, flow, graph, panelOpen]);
 
-  // Restore keyboard focus to the toggled node's button after re-layout,
-  // and again once the fit-view animation finishes.
   useEffect(() => {
     const id = restoreFocusRef.current;
     if (!id) return;
-    const frame = requestAnimationFrame(() => focusToggle(id));
+    const frame = requestAnimationFrame(() => focusNodeButton(id));
     const after = setTimeout(() => {
-      const active = document.activeElement as HTMLElement | null;
-      const movedAway =
-        active && active !== document.body && !containerRef.current?.contains(active);
-      if (!movedAway && active?.getAttribute?.("data-toggle-id") !== id) focusToggle(id);
       restoreFocusRef.current = null;
     }, 620);
     return () => {
       cancelAnimationFrame(frame);
       clearTimeout(after);
     };
-  }, [nodes, focusToggle]);
-
+  }, [nodes, focusNodeButton]);
 
   useEffect(() => {
     if (!selectedId) return;
+    if (depth !== "all") return;
     const node = flow.getNode(selectedId);
-    if (node)
-      flow.setCenter(node.position.x + NODE_WIDTH / 2, node.position.y + 40, {
-        zoom: flow.getZoom(),
+    if (node) {
+      flow.setCenter(node.position.x + TREE_NODE_W / 2, node.position.y + TREE_PORTRAIT / 2, {
+        zoom: Math.max(flow.getZoom(), 0.85),
         duration: 400,
       });
-  }, [selectedId, flow, nodes.length]);
+    }
+  }, [selectedId, depth, flow, nodes.length]);
 
   const navigateFocus = useCallback(
     (direction: "up" | "down" | "left" | "right") => {
       if (!nodes.length) return;
-      const { parentOf, childrenOf, orderedIds } = buildNavMaps(nodes, edges);
+      const parentOf = new Map<string, string>();
+      const childrenOf = new Map<string, string[]>();
+      const spousesOf = new Map<string, string[]>();
+      const xOf = new Map(nodes.map((n) => [n.id, n.position.x]));
+      for (const edge of edges) {
+        const kind = (edge.data as { kind?: string } | undefined)?.kind;
+        if (kind === "spouse") {
+          (spousesOf.get(edge.source) ?? spousesOf.set(edge.source, []).get(edge.source)!).push(edge.target);
+          (spousesOf.get(edge.target) ?? spousesOf.set(edge.target, []).get(edge.target)!).push(edge.source);
+          continue;
+        }
+        if (!parentOf.has(edge.target)) parentOf.set(edge.target, edge.source);
+        const kids = childrenOf.get(edge.source) ?? [];
+        kids.push(edge.target);
+        childrenOf.set(edge.source, kids);
+      }
+      for (const kids of childrenOf.values()) {
+        kids.sort((a, b) => (xOf.get(a) ?? 0) - (xOf.get(b) ?? 0));
+      }
       const current = focusedNodeId ?? selectedId ?? rootId;
       if (!current) return;
 
       let next: string | null = null;
-      if (direction === "up") {
-        next = parentOf.get(current) ?? null;
-      } else if (direction === "down") {
-        next = childrenOf.get(current)?.[0] ?? null;
-      } else {
-        const siblings =
-          current === rootId
-            ? orderedIds.filter((id) => !parentOf.has(id))
-            : (() => {
-                const parent = parentOf.get(current);
-                return parent ? (childrenOf.get(parent) ?? []) : orderedIds;
-              })();
-        const idx = siblings.indexOf(current);
+      if (direction === "up") next = parentOf.get(current) ?? null;
+      else if (direction === "down") next = childrenOf.get(current)?.[0] ?? null;
+      else {
+        const parent = parentOf.get(current);
+        const siblings = parent
+          ? (childrenOf.get(parent) ?? [])
+          : nodes.filter((n) => !parentOf.has(n.id)).sort((a, b) => a.position.x - b.position.x).map((n) => n.id);
+        const row = [...new Set([...siblings, ...(spousesOf.get(current) ?? [])])].sort(
+          (a, b) => (xOf.get(a) ?? 0) - (xOf.get(b) ?? 0),
+        );
+        const idx = row.indexOf(current);
         if (idx !== -1) {
-          if (direction === "left" && idx > 0) next = siblings[idx - 1]!;
-          if (direction === "right" && idx < siblings.length - 1) next = siblings[idx + 1]!;
+          if (direction === "left" && idx > 0) next = row[idx - 1]!;
+          if (direction === "right" && idx < row.length - 1) next = row[idx + 1]!;
         }
       }
 
-      if (next) {
-        onFocusNode(next);
-        const node = flow.getNode(next);
-        if (node)
-          flow.setCenter(node.position.x + NODE_WIDTH / 2, node.position.y + 40, {
-            zoom: flow.getZoom(),
-            duration: 200,
-          });
+      if (!next) return;
+      onFocusNode(next);
+      const node = flow.getNode(next);
+      if (node) {
+        flow.setCenter(node.position.x + TREE_NODE_W / 2, node.position.y + TREE_PORTRAIT / 2, {
+          zoom: flow.getZoom(),
+          duration: 200,
+        });
       }
     },
     [nodes, edges, focusedNodeId, selectedId, rootId, onFocusNode, flow],
   );
 
   const onKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      // Let buttons inside nodes handle their own Enter/Space activation.
+    (e: KeyboardEvent<HTMLDivElement>) => {
       const target = e.target as HTMLElement | null;
       if ((e.key === "Enter" || e.key === " ") && target?.closest("button")) return;
       if (e.key === "ArrowUp") {
@@ -530,7 +525,7 @@ function Canvas({
       } else if (e.key === "Enter" && (focusedNodeId ?? selectedId)) {
         e.preventDefault();
         onSelect(focusedNodeId ?? selectedId!);
-      } else if (e.key === " " && (focusedNodeId ?? selectedId)) {
+      } else if (e.key === " " && depth === "all" && (focusedNodeId ?? selectedId)) {
         e.preventDefault();
         handleToggle(focusedNodeId ?? selectedId!);
       } else if (e.key === "Escape") {
@@ -538,13 +533,13 @@ function Canvas({
         onClosePanel?.();
       }
     },
-    [navigateFocus, focusedNodeId, selectedId, onSelect, handleToggle, onClosePanel],
+    [navigateFocus, focusedNodeId, selectedId, onSelect, handleToggle, onClosePanel, depth],
   );
 
   return (
     <div
       ref={containerRef}
-      className="relative h-full w-full outline-none"
+      className="tree-graph relative h-full w-full outline-none"
       tabIndex={0}
       role="tree"
       aria-label={ariaLabel}
@@ -552,10 +547,7 @@ function Canvas({
     >
       <div
         aria-live="polite"
-        className={cn(
-          "pointer-events-none absolute left-1/2 top-3 z-30 -translate-x-1/2 rounded-full border border-border bg-card/95 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm transition-all duration-200",
-          settling ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0",
-        )}
+        className={cn("tree-settling", settling ? "tree-settling-on" : "tree-settling-off")}
       >
         Arranging branch…
       </div>
@@ -564,29 +556,24 @@ function Canvas({
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
-          minZoom={0.15}
-          maxZoom={1.6}
+          minZoom={0.28}
+          maxZoom={1.75}
           nodesDraggable={false}
           nodesConnectable={false}
           nodesFocusable={false}
           elementsSelectable={false}
           proOptions={{ hideAttribution: true }}
+          onNodeMouseEnter={(_, node) => setHoveredId(node.id)}
+          onNodeMouseLeave={() => setHoveredId(null)}
           className="bg-transparent"
         >
-          <Background color="var(--border)" gap={28} size={1.5} />
-          <Controls
-            showInteractive={false}
-            className="tree-controls !overflow-hidden !rounded-xl !border !border-border !bg-card/95 !shadow-sm !backdrop-blur"
-          />
-
+          <Background color="oklch(0.34 0.012 70)" gap={26} size={1.2} />
+          <Controls showInteractive={false} className="tree-controls" />
           {nodes.length > 40 && (
             <MiniMap
-              className="!rounded-lg !border !border-border !bg-card/90 !bottom-14 !left-3 !h-24 !w-32"
-              nodeColor={(node) => {
-                const branchKey = (node.data as TreeNodeData)?.branchKey ?? "";
-                return branchColor(branchKey);
-              }}
-              maskColor="oklch(0.4 0.03 70 / 0.08)"
+              className="tree-minimap"
+              nodeColor={(node) => (node.data as TreeNodeData)?.color ?? "oklch(0.7 0.04 80)"}
+              maskColor="oklch(0.12 0.01 70 / 0.55)"
               pannable
               zoomable
             />
@@ -595,7 +582,6 @@ function Canvas({
       </TreeHandlersContext.Provider>
       <div className="tree-vignette pointer-events-none absolute inset-0 z-10" aria-hidden />
     </div>
-
   );
 }
 

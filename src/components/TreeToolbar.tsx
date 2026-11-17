@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { FamilyGraph } from "@/lib/family";
+import type { TreeDepth } from "@/lib/tree-graph";
 import { cn } from "@/lib/utils";
 
 const COACHMARK_KEY = "tree-coachmark-dismissed";
@@ -40,6 +41,8 @@ type Props = {
   onCollapse: () => void;
   view: "canvas" | "list";
   onViewChange: (view: "canvas" | "list") => void;
+  depth: TreeDepth;
+  onDepthChange: (depth: TreeDepth) => void;
   listQuery?: string;
   onListQueryChange?: (query: string) => void;
 };
@@ -62,6 +65,8 @@ export function TreeToolbar({
   onCollapse,
   view,
   onViewChange,
+  depth,
+  onDepthChange,
   listQuery = "",
   onListQueryChange,
 }: Props) {
@@ -83,6 +88,36 @@ export function TreeToolbar({
     onViewChange(next);
     setOptionsOpen(false);
   };
+
+  const depthOptions: { id: TreeDepth; label: string; title: string }[] = [
+    { id: 1, label: "1", title: "This person, their parents, spouse, siblings, and children" },
+    { id: 2, label: "2", title: "Two steps out from this person" },
+    { id: "all", label: "All", title: "The whole branch" },
+  ];
+
+  const depthControl = view === "canvas" && (
+    <div className={cn(chip, "flex p-0.5 text-xs")} role="group" aria-label="Graph depth">
+      {depthOptions.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          title={option.title}
+          aria-pressed={depth === option.id}
+          onClick={() => onDepthChange(option.id)}
+          className={cn(
+            "rounded-full px-2.5 py-1 font-medium tabular-nums transition-colors",
+            depth === option.id
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const showExpand = view === "list" || depth === "all";
 
   const viewToggle = (
     <div className={cn(chip, "flex p-0.5 text-xs")} role="group" aria-label="View mode">
@@ -130,7 +165,7 @@ export function TreeToolbar({
 
   const optionsBody = (
     <div className="space-y-4">
-      {expandCollapseButtons}
+      {showExpand && expandCollapseButtons}
       {branches.length > 0 && (
         <div className="space-y-1.5">
           <p className="text-xs font-medium text-muted-foreground">Focus a branch</p>
@@ -141,6 +176,12 @@ export function TreeToolbar({
         <p className="text-xs font-medium text-muted-foreground">View</p>
         {viewToggle}
       </div>
+      {view === "canvas" && (
+        <div className="space-y-1.5">
+          <p className="text-xs font-medium text-muted-foreground">Graph depth</p>
+          {depthControl}
+        </div>
+      )}
       {filtersActive && (
         <Button size="sm" variant="outline" className="w-full rounded-full text-xs" onClick={onClearFilters}>
           Clear filters
@@ -186,8 +227,8 @@ export function TreeToolbar({
             <X className="size-3.5" />
           </button>
           <p className="pr-5">
-            Search by name to jump or filter the list · tap a person for their profile · use the
-            chevron to expand a branch
+            Search a name to jump to them. Hover a person to light their close family. 1 and 2 stay
+            nearby; All shows the branch.
           </p>
         </div>
       )}
@@ -228,6 +269,7 @@ export function TreeToolbar({
         </span>
         {nameSearch}
         {viewToggle}
+        {depthControl}
         {branches.length > 0 && (
           <BranchPicker branches={branches} value={branchPickerValue} onChange={onBranchChange} />
         )}
@@ -241,14 +283,15 @@ export function TreeToolbar({
             Clear
           </Button>
         )}
-        {expandCollapseButtons}
+        {showExpand && expandCollapseButtons}
       </div>
 
       <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 pb-0.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
         {isMobile && branches.length > 0 && (
           <BranchPicker branches={branches} value={branchPickerValue} onChange={onBranchChange} />
         )}
-        {isMobile && expandCollapseButtons}
+        {isMobile && depthControl}
+        {isMobile && showExpand && expandCollapseButtons}
         <GenerationPills maxGen={maxGen} gen={gen} onGenChange={onGenChange} />
         {isMobile && filtersActive && (
           <span className="shrink-0 self-center text-xs text-muted-foreground">

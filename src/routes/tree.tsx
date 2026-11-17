@@ -24,6 +24,7 @@ import { useFamilyGraph } from "@/hooks/useFamily";
 import { ancestryPath, canonicalRootId, collectSubtreeIds, effectiveDisplayName, listBranches, maxGeneration, pathWithinRoot, rootContainingPerson } from "@/lib/family";
 import { ancestorsToExpand, computeVisibility } from "@/lib/tree-filters";
 import { defaultExpanded, loadTreeState, saveTreeState } from "@/lib/tree-state";
+import type { TreeDepth } from "@/lib/tree-graph";
 import { SITE_NAME } from "@/lib/brand";
 
 const searchSchema = z.object({
@@ -67,6 +68,7 @@ function TreePage() {
   const [expandConfirmOpen, setExpandConfirmOpen] = useState(false);
   const [pendingExpandCount, setPendingExpandCount] = useState(0);
   const view = viewParam ?? "canvas";
+  const [depth, setDepth] = useState<TreeDepth>("all");
   const gen = genParam ?? null;
   const hydratedRoot = useRef<string | null>(null);
 
@@ -390,6 +392,8 @@ function TreePage() {
               onCollapse={collapseToDefault}
               view={view}
               onViewChange={setView}
+              depth={depth}
+              onDepthChange={setDepth}
               listQuery={listQuery}
               onListQueryChange={setListQuery}
             />
@@ -424,6 +428,7 @@ function TreePage() {
                       onToggleDeep={toggleDeep}
                       onClosePanel={selected ? closePanel : undefined}
                       panelOpen={!!selected}
+                      depth={depth}
                     />
                   ) : (
                     <FamilyTreeListView

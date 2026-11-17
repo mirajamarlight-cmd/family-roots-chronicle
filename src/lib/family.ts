@@ -115,16 +115,18 @@ export async function fetchFamilyGraph(): Promise<FamilyGraph> {
     const { pgFetchFamilyGraphFn } = await import("@/lib/pg-data.functions");
     return pgFetchFamilyGraphFn();
   }
-  const [people, linkRes] = await Promise.all([
+  const [people, linkRes, marriageRes] = await Promise.all([
     fetchPeople(),
     supabase.from("parent_child").select("id, parent_id, child_id, relationship_type, child_order"),
+    supabase.from("marriages").select("id, person1_id, person2_id, marriage_date, notes"),
   ]);
   if (linkRes.error) throw linkRes.error;
+  if (marriageRes.error) throw marriageRes.error;
 
   const { resolvePhotoUrls } = await import("./person-photo.ts");
   const withPhotos = await resolvePhotoUrls(people);
 
-  return buildGraph(withPhotos, (linkRes.data ?? []) as Link[], []);
+  return buildGraph(withPhotos, (linkRes.data ?? []) as Link[], (marriageRes.data ?? []) as Marriage[]);
 }
 
 export function buildGraph(people: Person[], links: Link[], marriages: Marriage[]): FamilyGraph {
